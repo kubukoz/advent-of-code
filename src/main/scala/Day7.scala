@@ -399,9 +399,7 @@ object Day7 {
       case numberPattern(x, z) => MoveGateInt(x.toInt, z)
       case varPattern(x, z) => MoveGateString(x, z)
     }.toList
-
-    println(gates.count(g => g.getClass == classOf[MoveGateInt]))
-
+     //todo
   }
 }
 

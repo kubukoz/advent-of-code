@@ -6,7 +6,6 @@ object Day12 {
 
     val numpat = "(-?[0-9]+)".r
 
-    val lel = """"""
     @tailrec
     def getStuff(s: String, state: List[Int] = Nil): List[Int] = numpat.findFirstIn(s) match{
       case Some(a) =>

@@ -45,26 +45,28 @@ object Day21 {
   }
 }
 
-case class Player(hp: Int, dam: Int, armor: Int){
+case class Player(hp: Int, dam: Int, armor: Int) {
   def attack(another: Player) = another.copy(hp = another.hp - Math.max(1, dam - another.armor))
+
   val dead = hp <= 0
+
   @tailrec
-  final def canDefeat(enemy: Player): Boolean = {
-    if (dead) false
-    else{
-      val enemyAttacked = attack(enemy)
-      if(enemyAttacked.dead) true
-      else{
+  final def canDefeat(enemy: Player): Boolean = dead match {
+    case true => false
+    case _ => attack(enemy) match {
+      case enemyAttacked if !enemyAttacked.dead =>
         enemyAttacked.attack(this).canDefeat(enemyAttacked)
-      }
+      case _ => true
     }
   }
 }
 
 
-case class Stock(items: List[Item]){
+case class Stock(items: List[Item]) {
   def damage = items.map(_.damage).sum
+
   def armor = items.map(_.armor).sum
+
   val player = Player(100, damage, armor)
 
   def totalPrice = items.map(_.cost).sum

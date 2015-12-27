@@ -23,16 +23,11 @@ object Day17 {
         |41
         |30
         |42""".stripMargin.split("\n").map(_.toInt)
-
-    //    val input = Array(20, 15, 10, 5, 5)
-
-    def trueCombinations(of: Array[Int], length: Int): List[List[Int]] = {
-      of.indices.combinations(length).map(_.map(of.apply).toList).toList
-    }
     val target = 150
-    val allCombsBecauseImLazy = (2 to input.length).flatMap(trueCombinations(input, _))
+
+    val allCombsBecauseImLazy = (2 to input.length).flatMap(input.indices.combinations(_).map(_.map(input.apply)))
     val validCombs = allCombsBecauseImLazy.filter(_.sum == target)
-    println(s"Part 1: ${validCombs.size}")
+    println("Part 1: " + validCombs.size)
     println("Part 2: " + validCombs.count(_.size == validCombs.map(_.size).min))
   }
 }

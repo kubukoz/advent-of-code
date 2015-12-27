@@ -68,7 +68,6 @@ class Reindeer(val speed: Int, val maxRun: Int, val maxRest: Int) extends Actor 
       remainingRun -= 1
       distance += speed
       if (remainingRun == 0) {
-        //        println("Stopping!")
         remainingRest = maxRest
         resting = true
       }

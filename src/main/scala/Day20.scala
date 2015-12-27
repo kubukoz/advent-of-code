@@ -6,7 +6,7 @@ object Day20 {
 
     val uses = mutable.Map.empty[Int, Int]
 
-    val houses = Stream.iterate(800000)(_+1)
+    val houses = Stream.iterate(1)(_+1)
 
     houses.find { i =>
       val sum = (1 to i).filter { elf =>

@@ -83,8 +83,6 @@ object Day19 {
     while (!result.contains("e")) {
       i += 1
       result = result.flatMap(op => options(op, transformsSwapped).distinct).distinct.sortBy(_.length).take(9) //really works with >= 9, but i tried it with 100 first
-//      println(s"round $i. currently ${result.length} results, shortest is ${result.minBy(_.length).length}")
-//      println(result.minBy(_.length))
     }
     println(s"Part 2: It took $i rounds!")
   }

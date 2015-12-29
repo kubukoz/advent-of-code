@@ -1005,7 +1005,7 @@ object Day5 {
         |phdqqxleqdjfgfbg
         |cqfikbgxvjmnfncy""".stripMargin.split("\n")
 
-    println(input.count(isNice)) //63 is too low, 77 is too high, it's not 70
+    println(input.count(isNice))
   }
 
   def secondCondition(s: String): Boolean = {

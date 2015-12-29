@@ -25,7 +25,6 @@ object Day21 {
         |Defense +2   40     0       2
         |Defense +3   80     0       3""".stripMargin.replaceAll( """ \+([0-9])""", "_+$1").split("\n")
 
-
     val weapons = shop.slice(1, 6).map(Item.from)
     val armor = shop.slice(8, 13).map(Item.from)
     val rings = shop.slice(15, 21).map(Item.from)
@@ -43,39 +42,39 @@ object Day21 {
     //part 2
     println(allCombs.sortBy(-_.totalPrice).find(!_.player.canDefeat(input)).map(_.totalPrice))
   }
-}
 
-case class Player(hp: Int, dam: Int, armor: Int) {
-  def attack(another: Player) = another.copy(hp = another.hp - Math.max(1, dam - another.armor))
+  case class Player(hp: Int, dam: Int, armor: Int) {
+    def attack(another: Player) = another.copy(hp = another.hp - Math.max(1, dam - another.armor))
 
-  val dead = hp <= 0
+    val dead = hp <= 0
 
-  @tailrec
-  final def canDefeat(enemy: Player): Boolean = dead match {
-    case true => false
-    case _ => attack(enemy) match {
-      case enemyAttacked if !enemyAttacked.dead =>
-        enemyAttacked.attack(this).canDefeat(enemyAttacked)
-      case _ => true
+    @tailrec
+    final def canDefeat(enemy: Player): Boolean = dead match {
+      case true => false
+      case _ => attack(enemy) match {
+        case enemyAttacked if !enemyAttacked.dead =>
+          enemyAttacked.attack(this).canDefeat(enemyAttacked)
+        case _ => true
+      }
     }
   }
-}
 
+  case class Stock(items: List[Item]) {
+    def damage = items.map(_.damage).sum
 
-case class Stock(items: List[Item]) {
-  def damage = items.map(_.damage).sum
+    def armor = items.map(_.armor).sum
 
-  def armor = items.map(_.armor).sum
+    val player = Player(100, damage, armor)
 
-  val player = Player(100, damage, armor)
-
-  def totalPrice = items.map(_.cost).sum
-}
-
-case class Item(name: String, cost: Int, damage: Int, armor: Int)
-
-object Item {
-  def from(s: String) = s.split(" ").filterNot(_ == "") match {
-    case Array(name, cost, damage, armor) => Item(name, cost.toInt, damage.toInt, armor.toInt)
+    def totalPrice = items.map(_.cost).sum
   }
+
+  case class Item(name: String, cost: Int, damage: Int, armor: Int)
+
+  object Item {
+    def from(s: String) = s.split(" ").filterNot(_ == "") match {
+      case Array(name, cost, damage, armor) => Item(name, cost.toInt, damage.toInt, armor.toInt)
+    }
+  }
+
 }

@@ -1,405 +1,362 @@
-import scala.collection.mutable
-
 object Day7 {
-  val data: mutable.Map[String, Int] = mutable.Map.empty
+  lazy val b = 19138
 
-  abstract sealed class Gate(x: String, y: String, z: String) {
-    def op(x: Int, y: Int): Int
-
-    def call() = data(z) = op(data(x), data(y))
-
-    def isReady = data.isDefinedAt(z)
+  /**I copied the input below and replaced the regex:
+    (.+) -> (.+)
+    with
+    lazy val $2 = $1
+    then I replaced all NOTs with ~.*/
+  def main(args: Array[String]): Unit = {
+    println(a)
   }
 
-  case class OrGate(x: String, y: String, z: String) extends Gate(x, y, z) {
-    override def op(x: Int, y: Int): Int = x | y
+  implicit class IdentifiersInInt(i: Int) {
+    def AND(another: Int) = i & another
+
+    def OR(another: Int) = i | another
+
+    def LSHIFT(another: Int) = i << another
+
+    def RSHIFT(another: Int) = i >> another
   }
 
-  case class AndGate(x: String, y: String, z: String) extends Gate(x, y, z) {
-    override def op(x: Int, y: Int): Int = x & y
-  }
-
-  case class RShiftGate(x: String, y: String, z: String) extends Gate(x, y, z) {
-    override def op(x: Int, y: Int): Int = x >> y
-  }
-
-  case class LShiftGate(x: String, y: String, z: String) extends Gate(x, y, z) {
-    override def op(x: Int, y: Int): Int = x << y
-  }
-
-  case class NotGate(x: String, z: String) extends Gate(x, x, z) {
-    override def op(x: Int, y: Int): Int = ~x
-  }
-
-  case class MoveGateString(x: String, z: String) extends Gate(x, x, z){
-    override def op(x: Int, y: Int): Int = x
-  }
-  case class MoveGateInt(a: Int, z: String) extends Gate(z, z, z){
-    override def op(x: Int, y: Int): Int = a
-  }
-
-  def main(args: Array[String]) {
-    val input =
-      """lf AND lq -> ls
-        |iu RSHIFT 1 -> jn
-        |bo OR bu -> bv
-        |gj RSHIFT 1 -> hc
-        |et RSHIFT 2 -> eu
-        |bv AND bx -> by
-        |is OR it -> iu
-        |b OR n -> o
-        |gf OR ge -> gg
-        |NOT kt -> ku
-        |ea AND eb -> ed
-        |kl OR kr -> ks
-        |hi AND hk -> hl
-        |au AND av -> ax
-        |lf RSHIFT 2 -> lg
-        |dd RSHIFT 3 -> df
-        |eu AND fa -> fc
-        |df AND dg -> di
-        |ip LSHIFT 15 -> it
-        |NOT el -> em
-        |et OR fe -> ff
-        |fj LSHIFT 15 -> fn
-        |t OR s -> u
-        |ly OR lz -> ma
-        |ko AND kq -> kr
-        |NOT fx -> fy
-        |et RSHIFT 1 -> fm
-        |eu OR fa -> fb
-        |dd RSHIFT 2 -> de
-        |NOT go -> gp
-        |kb AND kd -> ke
-        |hg OR hh -> hi
-        |jm LSHIFT 1 -> kg
-        |NOT cn -> co
-        |jp RSHIFT 2 -> jq
-        |jp RSHIFT 5 -> js
-        |1 AND io -> ip
-        |eo LSHIFT 15 -> es
-        |1 AND jj -> jk
-        |g AND i -> j
-        |ci RSHIFT 3 -> ck
-        |gn AND gp -> gq
-        |fs AND fu -> fv
-        |lj AND ll -> lm
-        |jk LSHIFT 15 -> jo
-        |iu RSHIFT 3 -> iw
-        |NOT ii -> ij
-        |1 AND cc -> cd
-        |bn RSHIFT 3 -> bp
-        |NOT gw -> gx
-        |NOT ft -> fu
-        |jn OR jo -> jp
-        |iv OR jb -> jc
-        |hv OR hu -> hw
-        |19138 -> b
-        |gj RSHIFT 5 -> gm
-        |hq AND hs -> ht
-        |dy RSHIFT 1 -> er
-        |ao OR an -> ap
-        |ld OR le -> lf
-        |bk LSHIFT 1 -> ce
-        |bz AND cb -> cc
-        |bi LSHIFT 15 -> bm
-        |il AND in -> io
-        |af AND ah -> ai
-        |as RSHIFT 1 -> bl
-        |lf RSHIFT 3 -> lh
-        |er OR es -> et
-        |NOT ax -> ay
-        |ci RSHIFT 1 -> db
-        |et AND fe -> fg
-        |lg OR lm -> ln
-        |k AND m -> n
-        |hz RSHIFT 2 -> ia
-        |kh LSHIFT 1 -> lb
-        |NOT ey -> ez
-        |NOT di -> dj
-        |dz OR ef -> eg
-        |lx -> a
-        |NOT iz -> ja
-        |gz LSHIFT 15 -> hd
-        |ce OR cd -> cf
-        |fq AND fr -> ft
-        |at AND az -> bb
-        |ha OR gz -> hb
-        |fp AND fv -> fx
-        |NOT gb -> gc
-        |ia AND ig -> ii
-        |gl OR gm -> gn
-        |0 -> c
-        |NOT ca -> cb
-        |bn RSHIFT 1 -> cg
-        |c LSHIFT 1 -> t
-        |iw OR ix -> iy
-        |kg OR kf -> kh
-        |dy OR ej -> ek
-        |km AND kn -> kp
-        |NOT fc -> fd
-        |hz RSHIFT 3 -> ib
-        |NOT dq -> dr
-        |NOT fg -> fh
-        |dy RSHIFT 2 -> dz
-        |kk RSHIFT 2 -> kl
-        |1 AND fi -> fj
-        |NOT hr -> hs
-        |jp RSHIFT 1 -> ki
-        |bl OR bm -> bn
-        |1 AND gy -> gz
-        |gr AND gt -> gu
-        |db OR dc -> dd
-        |de OR dk -> dl
-        |as RSHIFT 5 -> av
-        |lf RSHIFT 5 -> li
-        |hm AND ho -> hp
-        |cg OR ch -> ci
-        |gj AND gu -> gw
-        |ge LSHIFT 15 -> gi
-        |e OR f -> g
-        |fp OR fv -> fw
-        |fb AND fd -> fe
-        |cd LSHIFT 15 -> ch
-        |b RSHIFT 1 -> v
-        |at OR az -> ba
-        |bn RSHIFT 2 -> bo
-        |lh AND li -> lk
-        |dl AND dn -> do
-        |eg AND ei -> ej
-        |ex AND ez -> fa
-        |NOT kp -> kq
-        |NOT lk -> ll
-        |x AND ai -> ak
-        |jp OR ka -> kb
-        |NOT jd -> je
-        |iy AND ja -> jb
-        |jp RSHIFT 3 -> jr
-        |fo OR fz -> ga
-        |df OR dg -> dh
-        |gj RSHIFT 2 -> gk
-        |gj OR gu -> gv
-        |NOT jh -> ji
-        |ap LSHIFT 1 -> bj
-        |NOT ls -> lt
-        |ir LSHIFT 1 -> jl
-        |bn AND by -> ca
-        |lv LSHIFT 15 -> lz
-        |ba AND bc -> bd
-        |cy LSHIFT 15 -> dc
-        |ln AND lp -> lq
-        |x RSHIFT 1 -> aq
-        |gk OR gq -> gr
-        |NOT kx -> ky
-        |jg AND ji -> jj
-        |bn OR by -> bz
-        |fl LSHIFT 1 -> gf
-        |bp OR bq -> br
-        |he OR hp -> hq
-        |et RSHIFT 5 -> ew
-        |iu RSHIFT 2 -> iv
-        |gl AND gm -> go
-        |x OR ai -> aj
-        |hc OR hd -> he
-        |lg AND lm -> lo
-        |lh OR li -> lj
-        |da LSHIFT 1 -> du
-        |fo RSHIFT 2 -> fp
-        |gk AND gq -> gs
-        |bj OR bi -> bk
-        |lf OR lq -> lr
-        |cj AND cp -> cr
-        |hu LSHIFT 15 -> hy
-        |1 AND bh -> bi
-        |fo RSHIFT 3 -> fq
-        |NOT lo -> lp
-        |hw LSHIFT 1 -> iq
-        |dd RSHIFT 1 -> dw
-        |dt LSHIFT 15 -> dx
-        |dy AND ej -> el
-        |an LSHIFT 15 -> ar
-        |aq OR ar -> as
-        |1 AND r -> s
-        |fw AND fy -> fz
-        |NOT im -> in
-        |et RSHIFT 3 -> ev
-        |1 AND ds -> dt
-        |ec AND ee -> ef
-        |NOT ak -> al
-        |jl OR jk -> jm
-        |1 AND en -> eo
-        |lb OR la -> lc
-        |iu AND jf -> jh
-        |iu RSHIFT 5 -> ix
-        |bo AND bu -> bw
-        |cz OR cy -> da
-        |iv AND jb -> jd
-        |iw AND ix -> iz
-        |lf RSHIFT 1 -> ly
-        |iu OR jf -> jg
-        |NOT dm -> dn
-        |lw OR lv -> lx
-        |gg LSHIFT 1 -> ha
-        |lr AND lt -> lu
-        |fm OR fn -> fo
-        |he RSHIFT 3 -> hg
-        |aj AND al -> am
-        |1 AND kz -> la
-        |dy RSHIFT 5 -> eb
-        |jc AND je -> jf
-        |cm AND co -> cp
-        |gv AND gx -> gy
-        |ev OR ew -> ex
-        |jp AND ka -> kc
-        |fk OR fj -> fl
-        |dy RSHIFT 3 -> ea
-        |NOT bs -> bt
-        |NOT ag -> ah
-        |dz AND ef -> eh
-        |cf LSHIFT 1 -> cz
-        |NOT cv -> cw
-        |1 AND cx -> cy
-        |de AND dk -> dm
-        |ck AND cl -> cn
-        |x RSHIFT 5 -> aa
-        |dv LSHIFT 1 -> ep
-        |he RSHIFT 2 -> hf
-        |NOT bw -> bx
-        |ck OR cl -> cm
-        |bp AND bq -> bs
-        |as OR bd -> be
-        |he AND hp -> hr
-        |ev AND ew -> ey
-        |1 AND lu -> lv
-        |kk RSHIFT 3 -> km
-        |b AND n -> p
-        |NOT kc -> kd
-        |lc LSHIFT 1 -> lw
-        |km OR kn -> ko
-        |id AND if -> ig
-        |ih AND ij -> ik
-        |jr AND js -> ju
-        |ci RSHIFT 5 -> cl
-        |hz RSHIFT 1 -> is
-        |1 AND ke -> kf
-        |NOT gs -> gt
-        |aw AND ay -> az
-        |x RSHIFT 2 -> y
-        |ab AND ad -> ae
-        |ff AND fh -> fi
-        |ci AND ct -> cv
-        |eq LSHIFT 1 -> fk
-        |gj RSHIFT 3 -> gl
-        |u LSHIFT 1 -> ao
-        |NOT bb -> bc
-        |NOT hj -> hk
-        |kw AND ky -> kz
-        |as AND bd -> bf
-        |dw OR dx -> dy
-        |br AND bt -> bu
-        |kk AND kv -> kx
-        |ep OR eo -> eq
-        |he RSHIFT 1 -> hx
-        |ki OR kj -> kk
-        |NOT ju -> jv
-        |ek AND em -> en
-        |kk RSHIFT 5 -> kn
-        |NOT eh -> ei
-        |hx OR hy -> hz
-        |ea OR eb -> ec
-        |s LSHIFT 15 -> w
-        |fo RSHIFT 1 -> gh
-        |kk OR kv -> kw
-        |bn RSHIFT 5 -> bq
-        |NOT ed -> ee
-        |1 AND ht -> hu
-        |cu AND cw -> cx
-        |b RSHIFT 5 -> f
-        |kl AND kr -> kt
-        |iq OR ip -> ir
-        |ci RSHIFT 2 -> cj
-        |cj OR cp -> cq
-        |o AND q -> r
-        |dd RSHIFT 5 -> dg
-        |b RSHIFT 2 -> d
-        |ks AND ku -> kv
-        |b RSHIFT 3 -> e
-        |d OR j -> k
-        |NOT p -> q
-        |NOT cr -> cs
-        |du OR dt -> dv
-        |kf LSHIFT 15 -> kj
-        |NOT ac -> ad
-        |fo RSHIFT 5 -> fr
-        |hz OR ik -> il
-        |jx AND jz -> ka
-        |gh OR gi -> gj
-        |kk RSHIFT 1 -> ld
-        |hz RSHIFT 5 -> ic
-        |as RSHIFT 2 -> at
-        |NOT jy -> jz
-        |1 AND am -> an
-        |ci OR ct -> cu
-        |hg AND hh -> hj
-        |jq OR jw -> jx
-        |v OR w -> x
-        |la LSHIFT 15 -> le
-        |dh AND dj -> dk
-        |dp AND dr -> ds
-        |jq AND jw -> jy
-        |au OR av -> aw
-        |NOT bf -> bg
-        |z OR aa -> ab
-        |ga AND gc -> gd
-        |hz AND ik -> im
-        |jt AND jv -> jw
-        |z AND aa -> ac
-        |jr OR js -> jt
-        |hb LSHIFT 1 -> hv
-        |hf OR hl -> hm
-        |ib OR ic -> id
-        |fq OR fr -> fs
-        |cq AND cs -> ct
-        |ia OR ig -> ih
-        |dd OR do -> dp
-        |d AND j -> l
-        |ib AND ic -> ie
-        |as RSHIFT 3 -> au
-        |be AND bg -> bh
-        |dd AND do -> dq
-        |NOT l -> m
-        |1 AND gd -> ge
-        |y AND ae -> ag
-        |fo AND fz -> gb
-        |NOT ie -> if
-        |e AND f -> h
-        |x RSHIFT 3 -> z
-        |y OR ae -> af
-        |hf AND hl -> hn
-        |NOT h -> i
-        |NOT hn -> ho
-        |he RSHIFT 5 -> hh""".stripMargin.split("\n")
-
-    val toPart = "-> (.+)"
-
-    val andPattern = s"(.+) AND (.+) $toPart".r
-    val orPattern = s"(.+) OR (.+) $toPart".r
-    val rShiftPattern = s"(.+) RSHIFT (.+) $toPart".r
-    val lShiftPattern = s"(.+) LSHIFT (.+) $toPart".r
-    val notPattern = s"NOT (.+) $toPart".r
-    val varPattern = s"([A-z]+) $toPart".r
-    val numberPattern = s"([0-9]+) $toPart".r
-
-    val gates: List[Gate] = input.map {
-      case andPattern(x, y, z) => AndGate(x, y, z)
-      case orPattern(x, y, z) => OrGate(x, y, z)
-      case rShiftPattern(x, y, z) => RShiftGate(x, y, z)
-      case lShiftPattern(x, y, z) => LShiftGate(x, y, z)
-      case notPattern(x, z) => NotGate(x, z)
-      case numberPattern(x, z) => MoveGateInt(x.toInt, z)
-      case varPattern(x, z) => MoveGateString(x, z)
-    }.toList
-     //todo
-  }
+  lazy val ls = lf AND lq
+  lazy val jn = iu RSHIFT 1
+  lazy val bv = bo OR bu
+  lazy val hc = gj RSHIFT 1
+  lazy val eu = et RSHIFT 2
+  lazy val by = bv AND bx
+  lazy val iu = is OR it
+  lazy val o = b OR n
+  lazy val gg = gf OR ge
+  lazy val ku = ~kt
+  lazy val ed = ea AND eb
+  lazy val ks = kl OR kr
+  lazy val hl = hi AND hk
+  lazy val ax = au AND av
+  lazy val lg = lf RSHIFT 2
+  lazy val df = dd RSHIFT 3
+  lazy val fc = eu AND fa
+  lazy val di = df AND dg
+  lazy val it = ip LSHIFT 15
+  lazy val em = ~el
+  lazy val ff = et OR fe
+  lazy val fn = fj LSHIFT 15
+  lazy val u = t OR s
+  lazy val ma = ly OR lz
+  lazy val kr = ko AND kq
+  lazy val fy = ~fx
+  lazy val fm = et RSHIFT 1
+  lazy val fb = eu OR fa
+  lazy val de = dd RSHIFT 2
+  lazy val gp = ~go
+  lazy val ke = kb AND kd
+  lazy val hi = hg OR hh
+  lazy val kg = jm LSHIFT 1
+  lazy val co = ~cn
+  lazy val jq = jp RSHIFT 2
+  lazy val js = jp RSHIFT 5
+  lazy val ip = 1 AND io
+  lazy val es = eo LSHIFT 15
+  lazy val jk = 1 AND jj
+  lazy val j = g AND i
+  lazy val ck = ci RSHIFT 3
+  lazy val gq = gn AND gp
+  lazy val fv = fs AND fu
+  lazy val lm = lj AND ll
+  lazy val jo = jk LSHIFT 15
+  lazy val iw = iu RSHIFT 3
+  lazy val ij = ~ii
+  lazy val cd = 1 AND cc
+  lazy val bp = bn RSHIFT 3
+  lazy val gx = ~gw
+  lazy val fu = ~ft
+  lazy val jp = jn OR jo
+  lazy val jc = iv OR jb
+  lazy val hw = hv OR hu
+  lazy val gm = gj RSHIFT 5
+  lazy val ht = hq AND hs
+  lazy val er = dy RSHIFT 1
+  lazy val ap = ao OR an
+  lazy val lf = ld OR le
+  lazy val ce = bk LSHIFT 1
+  lazy val cc = bz AND cb
+  lazy val bm = bi LSHIFT 15
+  lazy val io = il AND in
+  lazy val ai = af AND ah
+  lazy val bl = as RSHIFT 1
+  lazy val lh = lf RSHIFT 3
+  lazy val et = er OR es
+  lazy val ay = ~ax
+  lazy val db = ci RSHIFT 1
+  lazy val fg = et AND fe
+  lazy val ln = lg OR lm
+  lazy val n = k AND m
+  lazy val ia = hz RSHIFT 2
+  lazy val lb = kh LSHIFT 1
+  lazy val ez = ~ey
+  lazy val dj = ~di
+  lazy val eg = dz OR ef
+  lazy val a = lx
+  lazy val ja = ~iz
+  lazy val hd = gz LSHIFT 15
+  lazy val cf = ce OR cd
+  lazy val ft = fq AND fr
+  lazy val bb = at AND az
+  lazy val hb = ha OR gz
+  lazy val fx = fp AND fv
+  lazy val gc = ~gb
+  lazy val ii = ia AND ig
+  lazy val gn = gl OR gm
+  lazy val c = 0
+  lazy val cb = ~ca
+  lazy val cg = bn RSHIFT 1
+  lazy val t = c LSHIFT 1
+  lazy val iy = iw OR ix
+  lazy val kh = kg OR kf
+  lazy val ek = dy OR ej
+  lazy val kp = km AND kn
+  lazy val fd = ~fc
+  lazy val ib = hz RSHIFT 3
+  lazy val dr = ~dq
+  lazy val fh = ~fg
+  lazy val dz = dy RSHIFT 2
+  lazy val kl = kk RSHIFT 2
+  lazy val fj = 1 AND fi
+  lazy val hs = ~hr
+  lazy val ki = jp RSHIFT 1
+  lazy val bn = bl OR bm
+  lazy val gz = 1 AND gy
+  lazy val gu = gr AND gt
+  lazy val dd = db OR dc
+  lazy val dl = de OR dk
+  lazy val av = as RSHIFT 5
+  lazy val li = lf RSHIFT 5
+  lazy val hp = hm AND ho
+  lazy val ci = cg OR ch
+  lazy val gw = gj AND gu
+  lazy val gi = ge LSHIFT 15
+  lazy val g = e OR f
+  lazy val fw = fp OR fv
+  lazy val fe = fb AND fd
+  lazy val ch = cd LSHIFT 15
+  lazy val v = b RSHIFT 1
+  lazy val ba = at OR az
+  lazy val bo = bn RSHIFT 2
+  lazy val lk = lh AND li
+  lazy val `do` = dl AND dn
+  lazy val ej = eg AND ei
+  lazy val fa = ex AND ez
+  lazy val kq = ~kp
+  lazy val ll = ~lk
+  lazy val ak = x AND ai
+  lazy val kb = jp OR ka
+  lazy val je = ~jd
+  lazy val jb = iy AND ja
+  lazy val jr = jp RSHIFT 3
+  lazy val ga = fo OR fz
+  lazy val dh = df OR dg
+  lazy val gk = gj RSHIFT 2
+  lazy val gv = gj OR gu
+  lazy val ji = ~jh
+  lazy val bj = ap LSHIFT 1
+  lazy val lt = ~ls
+  lazy val jl = ir LSHIFT 1
+  lazy val ca = bn AND by
+  lazy val lz = lv LSHIFT 15
+  lazy val bd = ba AND bc
+  lazy val dc = cy LSHIFT 15
+  lazy val lq = ln AND lp
+  lazy val aq = x RSHIFT 1
+  lazy val gr = gk OR gq
+  lazy val ky = ~kx
+  lazy val jj = jg AND ji
+  lazy val bz = bn OR by
+  lazy val gf = fl LSHIFT 1
+  lazy val br = bp OR bq
+  lazy val hq = he OR hp
+  lazy val ew = et RSHIFT 5
+  lazy val iv = iu RSHIFT 2
+  lazy val go = gl AND gm
+  lazy val aj = x OR ai
+  lazy val he = hc OR hd
+  lazy val lo = lg AND lm
+  lazy val lj = lh OR li
+  lazy val du = da LSHIFT 1
+  lazy val fp = fo RSHIFT 2
+  lazy val gs = gk AND gq
+  lazy val bk = bj OR bi
+  lazy val lr = lf OR lq
+  lazy val cr = cj AND cp
+  lazy val hy = hu LSHIFT 15
+  lazy val bi = 1 AND bh
+  lazy val fq = fo RSHIFT 3
+  lazy val lp = ~lo
+  lazy val iq = hw LSHIFT 1
+  lazy val dw = dd RSHIFT 1
+  lazy val dx = dt LSHIFT 15
+  lazy val el = dy AND ej
+  lazy val ar = an LSHIFT 15
+  lazy val as = aq OR ar
+  lazy val s = 1 AND r
+  lazy val fz = fw AND fy
+  lazy val in = ~im
+  lazy val ev = et RSHIFT 3
+  lazy val dt = 1 AND ds
+  lazy val ef = ec AND ee
+  lazy val al = ~ak
+  lazy val jm = jl OR jk
+  lazy val eo = 1 AND en
+  lazy val lc = lb OR la
+  lazy val jh = iu AND jf
+  lazy val ix = iu RSHIFT 5
+  lazy val bw = bo AND bu
+  lazy val da = cz OR cy
+  lazy val jd = iv AND jb
+  lazy val iz = iw AND ix
+  lazy val ly = lf RSHIFT 1
+  lazy val jg = iu OR jf
+  lazy val dn = ~dm
+  lazy val lx = lw OR lv
+  lazy val ha = gg LSHIFT 1
+  lazy val lu = lr AND lt
+  lazy val fo = fm OR fn
+  lazy val hg = he RSHIFT 3
+  lazy val am = aj AND al
+  lazy val la = 1 AND kz
+  lazy val eb = dy RSHIFT 5
+  lazy val jf = jc AND je
+  lazy val cp = cm AND co
+  lazy val gy = gv AND gx
+  lazy val ex = ev OR ew
+  lazy val kc = jp AND ka
+  lazy val fl = fk OR fj
+  lazy val ea = dy RSHIFT 3
+  lazy val bt = ~bs
+  lazy val ah = ~ag
+  lazy val eh = dz AND ef
+  lazy val cz = cf LSHIFT 1
+  lazy val cw = ~cv
+  lazy val cy = 1 AND cx
+  lazy val dm = de AND dk
+  lazy val cn = ck AND cl
+  lazy val aa = x RSHIFT 5
+  lazy val ep = dv LSHIFT 1
+  lazy val hf = he RSHIFT 2
+  lazy val bx = ~bw
+  lazy val cm = ck OR cl
+  lazy val bs = bp AND bq
+  lazy val be = as OR bd
+  lazy val hr = he AND hp
+  lazy val ey = ev AND ew
+  lazy val lv = 1 AND lu
+  lazy val km = kk RSHIFT 3
+  lazy val p = b AND n
+  lazy val kd = ~kc
+  lazy val lw = lc LSHIFT 1
+  lazy val ko = km OR kn
+  lazy val ig = id AND `if`
+  lazy val ik = ih AND ij
+  lazy val ju = jr AND js
+  lazy val cl = ci RSHIFT 5
+  lazy val is = hz RSHIFT 1
+  lazy val kf = 1 AND ke
+  lazy val gt = ~gs
+  lazy val az = aw AND ay
+  lazy val y = x RSHIFT 2
+  lazy val ae = ab AND ad
+  lazy val fi = ff AND fh
+  lazy val cv = ci AND ct
+  lazy val fk = eq LSHIFT 1
+  lazy val gl = gj RSHIFT 3
+  lazy val ao = u LSHIFT 1
+  lazy val bc = ~bb
+  lazy val hk = ~hj
+  lazy val kz = kw AND ky
+  lazy val bf = as AND bd
+  lazy val dy = dw OR dx
+  lazy val bu = br AND bt
+  lazy val kx = kk AND kv
+  lazy val eq = ep OR eo
+  lazy val hx = he RSHIFT 1
+  lazy val kk = ki OR kj
+  lazy val jv = ~ju
+  lazy val en = ek AND em
+  lazy val kn = kk RSHIFT 5
+  lazy val ei = ~eh
+  lazy val hz = hx OR hy
+  lazy val ec = ea OR eb
+  lazy val w = s LSHIFT 15
+  lazy val gh = fo RSHIFT 1
+  lazy val kw = kk OR kv
+  lazy val bq = bn RSHIFT 5
+  lazy val ee = ~ed
+  lazy val hu = 1 AND ht
+  lazy val cx = cu AND cw
+  lazy val f = b RSHIFT 5
+  lazy val kt = kl AND kr
+  lazy val ir = iq OR ip
+  lazy val cj = ci RSHIFT 2
+  lazy val cq = cj OR cp
+  lazy val r = o AND q
+  lazy val dg = dd RSHIFT 5
+  lazy val d = b RSHIFT 2
+  lazy val kv = ks AND ku
+  lazy val e = b RSHIFT 3
+  lazy val k = d OR j
+  lazy val q = ~p
+  lazy val cs = ~cr
+  lazy val dv = du OR dt
+  lazy val kj = kf LSHIFT 15
+  lazy val ad = ~ac
+  lazy val fr = fo RSHIFT 5
+  lazy val il = hz OR ik
+  lazy val ka = jx AND jz
+  lazy val gj = gh OR gi
+  lazy val ld = kk RSHIFT 1
+  lazy val ic = hz RSHIFT 5
+  lazy val at = as RSHIFT 2
+  lazy val jz = ~jy
+  lazy val an = 1 AND am
+  lazy val cu = ci OR ct
+  lazy val hj = hg AND hh
+  lazy val jx = jq OR jw
+  lazy val x = v OR w
+  lazy val le = la LSHIFT 15
+  lazy val dk = dh AND dj
+  lazy val ds = dp AND dr
+  lazy val jy = jq AND jw
+  lazy val aw = au OR av
+  lazy val bg = ~bf
+  lazy val ab = z OR aa
+  lazy val gd = ga AND gc
+  lazy val im = hz AND ik
+  lazy val jw = jt AND jv
+  lazy val ac = z AND aa
+  lazy val jt = jr OR js
+  lazy val hv = hb LSHIFT 1
+  lazy val hm = hf OR hl
+  lazy val id = ib OR ic
+  lazy val fs = fq OR fr
+  lazy val ct = cq AND cs
+  lazy val ih = ia OR ig
+  lazy val dp = dd OR `do`
+  lazy val l = d AND j
+  lazy val ie = ib AND ic
+  lazy val au = as RSHIFT 3
+  lazy val bh = be AND bg
+  lazy val dq = dd AND `do`
+  lazy val m = ~l
+  lazy val ge = 1 AND gd
+  lazy val ag = y AND ae
+  lazy val gb = fo AND fz
+  lazy val `if` = ~ie
+  lazy val h = e AND f
+  lazy val z = x RSHIFT 3
+  lazy val af = y OR ae
+  lazy val hn = hf AND hl
+  lazy val i = ~h
+  lazy val ho = ~hn
+  lazy val hh = he RSHIFT 5
 }
 

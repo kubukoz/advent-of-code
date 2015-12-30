@@ -24,63 +24,32 @@ object Day12 {
         val newMemory = memory + smaller + 1
         getClosing(newStr, newLevel, newMemory)
     }
-    val ANSI_RESET = "\u001B[0m"
-    val ANSI_RED = "\u001B[31m"
 
     def getOpening(s: String, currentLevel: Int, memory: Int): Int = currentLevel match {
       case 1 => memory
       case _ =>
-        val previousIndexOfOpen = s.substring(0, s.length - memory - 1).lastIndexOf('{')
-        val previousIndexOfClose = s.substring(0, s.length - memory - 1).lastIndexOf('}')
-        val bigger = previousIndexOfOpen max previousIndexOfClose
-        val newLevel = currentLevel + (if (bigger == previousIndexOfOpen) 1 else -1)
+        val lastIndexOfOpen = s.lastIndexOf('{')
+        val lastIndexOfClose = s.lastIndexOf('}')
+        val bigger = lastIndexOfOpen max lastIndexOfClose
+        val newLevel = currentLevel + (if (bigger == lastIndexOfClose) -1 else 1)
+        val newStr = s.substring(0, bigger)
         val newMemory = bigger
-        val newStr = s.substring(0, newMemory)
-        println(s"$ANSI_RESET Found '{' at $previousIndexOfOpen, '}' at $previousIndexOfClose, level: $currentLevel -> $newLevel, memory = $memory")
-        println(s)
-        println(newStr)
-        //        Thread.sleep(2000)
         getOpening(newStr, newLevel, newMemory)
     }
 
-    def filterReds(in: String, prefix: String = "", fromIndex: Int = 0): String = {
-      val ind = in.substring(fromIndex).indexOf(":\"red\"")
-      if (ind < 0) prefix + in
+    def filterReds(in: String): String = {
+      val ind = in.indexOf(":\"red\"")
+      if (ind < 0) in
       else {
-        val objStart = getOpening(in.substring(0, ind), 0, 0)
+        val objStart = getOpening(in.substring(0, ind), 0, ind)
         val objEnd = getClosing(in.substring(ind), 0, ind)
 
-        val red = if (objStart >= 0)
-          ANSI_RED + in.substring(objStart, objEnd) + ANSI_RESET
-        else ""
-        println(red)
-
-        filterReds(in, prefix + in.take(objStart), objEnd)
+        filterReds(in.substring(0, objStart) + in.substring(objEnd))
       }
     }
 
     def getSum(in: String) = getStuff(in).sum
-//        val f1 = filterReds( """[{"asdf": [1, 2, 3], "bsdf": {"a":"red"}}, 1,{"a": 5, "bsdddg":"red"}, 5]""")
-    //    assert(getSum(f1) == 12)
-    //    val f2 = filterReds( """[1,2,3]""")
-    //    assert(getSum(f2) == 6)
-    //    val f3 = filterReds( """[1,{"c":"red","b":2},3]""")
-    //    assert(getSum(f3) == 4)
-//        val f4 = filterReds( """{"d":"red","e":[1,2,3,4],"f":5}""")
-    //    assert(getSum(f4) == 0)
-    //    val f5 = filterReds( """[1,"red",5]""")
-    //    assert(getSum(f5) == 6)
-    val f6 = filterReds( """{"a":{"b":{"a":"red"},"b":"red"}}""")
-    println(f6)
-    //    assert(getSum(f6) == 0)
-    //    println(getSum(input)) // 156366
-    //    println(filterReds(input))
-    //    println(getSum(filterReds(input))) //less than 102148
-    //    println(f1)
-    //    println(f2)
-    //    println(f3)
-    //    println(f4)
-    //    println(f5)
-    //    println(f6)
+    println(getSum(input))
+    println(getSum(filterReds(input)))
   }
 }

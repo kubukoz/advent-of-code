@@ -24,12 +24,11 @@ object Day2 {
   def findCode(input: String, keypadStr: String): String = {
     val allInstructions = input.split("\n").map(_.map(Direction.fromChar))
 
-    val keypad =
-      keypadStr.split("\n").zipWithIndex.flatMap {
-        case (line, y) => line.zipWithIndex.collect {
-          case (ch, x) if !ch.isWhitespace => ((x, y), ch)
-        }
-      }.toMap
+    val keypad = keypadStr.split("\n").zipWithIndex.flatMap {
+      case (line, y) => line.zipWithIndex.collect {
+        case (ch, x) if !ch.isWhitespace => (x, y) -> ch
+      }
+    }.toMap
 
     val startingPlace = keypad.collectFirst {
       case (position, '5') => position
@@ -39,13 +38,13 @@ object Day2 {
       case (previousKey, directions) =>
 
         directions.foldLeft(previousKey) {
-        case ((x, y), direction) =>
-          val newX = x + direction.dx
-          val newY = y + direction.dy
+          case (oldPosition, direction) =>
+            val (x, y) = oldPosition
+            val newPosition = (x + direction.dx, y + direction.dy)
 
-          if (keypad.isDefinedAt((newX, newY))) (newX, newY)
-          else (x, y)
-      }
+            if (keypad.isDefinedAt(newPosition)) newPosition
+            else oldPosition
+        }
     }.tail flatMap keypad.get mkString
   }
 

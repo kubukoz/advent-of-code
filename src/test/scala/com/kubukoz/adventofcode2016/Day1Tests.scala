@@ -1,4 +1,4 @@
-package com.kubukoz.adventofcode2016.adventofcode2016
+package com.kubukoz.adventofcode2016
 
 import com.kubukoz.adventofcode2016.Day1._
 import org.scalatest.{FlatSpec, Matchers}

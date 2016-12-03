@@ -18,7 +18,9 @@ object Day3 {
   }
 
   def main(args: Array[String]): Unit = {
-    val input = io.Source.fromURL(getClass.getResource("/day3.txt")).getLines().toList
+    val src = io.Source.fromURL(getClass.getResource("/day3.txt"))
+    val input = src.getLines().toList
+    src.close()
 
     println(countTriangles(input))
     println(countTrianglesVertical(input))

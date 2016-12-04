@@ -15,4 +15,8 @@ class Day4Tests extends FlatSpec with Matchers {
   it should "work for case 4" in {
     Room.fromString("totally-real-room-200[decoy]").isReal shouldBe false
   }
+
+  "Rotation" should "work" in {
+    Room.fromString("qzmt-zixmtkozy-ivhz-343[asdfg]").rotatedLetters.letters shouldBe "very encrypted name"
+  }
 }

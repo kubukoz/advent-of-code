@@ -7,9 +7,19 @@ case class Room(letters: String, sectorId: Int, checksum: String) {
 
     val calculatedChecksum =
       lettersByCount.values.toList.sorted.reverse
-      .flatMap(groupedByCount)
-      .distinct.take(5).mkString
+        .flatMap(groupedByCount)
+        .distinct.take(5).mkString
     checksum == calculatedChecksum
+  }
+
+  def rotatedLetters: Room = {
+    val chars = 'a' to 'z'
+    val newLetters = letters.map {
+      case '-' => ' '
+      case ch => chars((chars.indexOf(ch) + sectorId) % chars.size)
+    }
+
+    copy(letters = newLetters)
   }
 }
 
@@ -28,6 +38,11 @@ object Day4 {
     val input = src.getLines().toList
     src.close()
 
-    println(input.map(Room.fromString).filter(_.isReal).map(_.sectorId).sum)
+    val realRooms = input.map(Room.fromString).filter(_.isReal)
+
+    println("part 1")
+    println(realRooms.map(_.sectorId).sum)
+    println("part 2")
+    realRooms.map(_.rotatedLetters).find(_.letters == "northpole object storage").map(_.sectorId) foreach println
   }
 }

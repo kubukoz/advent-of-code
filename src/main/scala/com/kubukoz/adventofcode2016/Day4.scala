@@ -3,12 +3,10 @@ package com.kubukoz.adventofcode2016
 case class Room(letters: String, sectorId: Int, checksum: String) {
   def isReal: Boolean = {
     val lettersByCount = letters.filterNot(_ == '-').groupBy(identity).mapValues(_.length)
-    val groupedByCount = lettersByCount.groupBy(_._2).mapValues(_.keys.toList.sorted)
 
-    val calculatedChecksum =
-      lettersByCount.values.toList.sorted.reverse
-        .flatMap(groupedByCount)
-        .distinct.take(5).mkString
+    implicit val ord: Ordering[(Char, Int)] = Ordering.by { case (letter, count) => (-count, letter) }
+
+    val calculatedChecksum = lettersByCount.toList.sorted(ord).map(_._1).take(checksum.length).mkString
     checksum == calculatedChecksum
   }
 
@@ -26,9 +24,8 @@ case class Room(letters: String, sectorId: Int, checksum: String) {
 object Room {
   private val roomPattern = """(.+)\-(\d+)\[(.{5})\]""".r
 
-  def fromString(s: String): Room = s match {
-    case roomPattern(letters, sectorId, checksum) =>
-      Room(letters, sectorId.toInt, checksum)
+  val fromString: String => Room = {
+    case roomPattern(letters, sectorId, checksum) => Room(letters, sectorId.toInt, checksum)
   }
 }
 

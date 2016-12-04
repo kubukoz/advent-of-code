@@ -7,7 +7,7 @@ object Day2 {
   case class Direction(dx: Int, dy: Int)
 
   object Direction {
-    def fromChar: Char => Direction = {
+    val fromChar: Char => Direction = {
       case 'L' => L
       case 'R' => R
       case 'U' => U

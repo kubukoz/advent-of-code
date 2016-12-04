@@ -1,5 +1,7 @@
 package com.kubukoz.adventofcode2016
 
+import scala.language.postfixOps
+
 object Day2 {
 
   case class Direction(dx: Int, dy: Int)

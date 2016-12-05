@@ -1,7 +1,5 @@
 package com.kubukoz.adventofcode2016
 
-import scala.annotation.tailrec
-
 object Day5 {
   private val md = java.security.MessageDigest.getInstance("MD5")
   private val rounds = 8
@@ -11,9 +9,9 @@ object Day5 {
   }
 
   private def findPassword(s: String, validateMd5: String => Boolean, fun: (Int, String) => (Int, Char)): String = {
-    @tailrec
+    @annotation.tailrec
     def go(mem: Map[Int, Char], lastNum: Int): Map[Int, Char] = {
-      @tailrec
+      @annotation.tailrec
       def findNextNumber(current: Int): (Int, String) = {
         val result = md5(s + current)
         if (result.startsWith("0" * 5) && validateMd5(result)) (current, result)
@@ -30,15 +28,13 @@ object Day5 {
     }
 
     val theMap = go(Map.empty, 0)
-
     (0 until rounds).map(theMap).mkString
   }
 
   def findEasyPassword(s: String): String = findPassword(s, _ => true, (i, s) => (i, s(5)))
 
-  def findHardPassword(s: String): String = {
-    findPassword(s, result => result(5).asDigit < rounds, (_, s) => (s(5).asDigit, s(6)))
-  }
+  def findHardPassword(s: String): String =
+    findPassword(s, _.charAt(5).asDigit < rounds, (_, s) => (s(5).asDigit, s(6)))
 
   def main(args: Array[String]): Unit = {
     val input = "ffykfhsq"

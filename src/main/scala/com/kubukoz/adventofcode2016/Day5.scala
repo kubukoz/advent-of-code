@@ -4,9 +4,7 @@ object Day5 {
   private val md = java.security.MessageDigest.getInstance("MD5")
   private val rounds = 8
 
-  private def md5(s: String) = {
-    md.digest(s.getBytes).take(4).map("%02X".format(_)).mkString
-  }
+  private def md5(s: String) = "%1$032X".format(BigInt(1, md.digest(s.getBytes)))
 
   private def findPassword(s: String, validateMd5: String => Boolean, fun: (Int, String) => (Int, Char)): String = {
     @annotation.tailrec
@@ -14,7 +12,7 @@ object Day5 {
       @annotation.tailrec
       def findNextNumber(current: Int): (Int, String) = {
         val result = md5(s + current)
-        if (result.startsWith("0" * 5) && validateMd5(result)) (current, result)
+        if (result.startsWith("00000") && validateMd5(result)) (current, result)
         else findNextNumber(current + 1)
       }
 

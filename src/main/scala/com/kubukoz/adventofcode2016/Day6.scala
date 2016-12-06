@@ -1,10 +1,5 @@
 package com.kubukoz.adventofcode2016
 
-import scala.collection.immutable.Seq
-
-/**
-  * Created by kubukoz on 06/12/2016.
-  */
 object Day6 {
   private def findPasswordByFrequency(input: List[String], selectFun: List[Char] => Char): String = {
     val charsByColumn = input.map {

@@ -35,6 +35,7 @@ class Day7Tests extends FlatSpec with Matchers {
   it should "count the input" in {
     input.count(supportsTLS) shouldBe 118
   }
+/*
 
   "supportsSSL" should "work properly for case 1" in {
     supportsSSL("aba[bab]xyz") shouldBe true
@@ -58,5 +59,10 @@ class Day7Tests extends FlatSpec with Matchers {
 
   it should "count the input" in {
     input.count(supportsSSL) shouldBe 260
+  }
+*/
+
+  it should "work for the weird case" in {
+    supportsSSL("xtugntiubziynpzbju[onxffxfoxibzzzd]wineojjetzitpemflx[jlncrpyrujpoxluwyc]fxvfnhyqsiwndzoh[lkwwatmiesspwcqulnc]cbimtxmazbbzlvjf") shouldBe false
   }
 }

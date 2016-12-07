@@ -31,9 +31,7 @@ object Room {
 
 object Day4 {
   def main(args: Array[String]): Unit = {
-    val src = io.Source.fromURL(getClass.getResource("/day4.txt"))
-    val input = src.getLines().toList
-    src.close()
+    val input = fileLines("/day4.txt")
 
     val realRooms = input.map(Room.fromString).filter(_.isReal)
 

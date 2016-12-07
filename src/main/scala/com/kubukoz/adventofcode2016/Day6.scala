@@ -18,9 +18,7 @@ object Day6 {
   def findPasswordByLeastPopular(input: List[String]): String = findPasswordByFrequency(input, _.minBy(_._2))
 
   def main(args: Array[String]): Unit = {
-    val source = io.Source.fromURL(getClass.getResource("/day6.txt"))
-    val input = source.getLines().toList
-    source.close()
+    val input = fileLines("/day6.txt")
 
     println(findPasswordByMostPopular(input))
     println(findPasswordByLeastPopular(input))

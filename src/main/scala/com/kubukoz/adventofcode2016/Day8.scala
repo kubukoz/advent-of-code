@@ -2,8 +2,10 @@ package com.kubukoz.adventofcode2016
 
 object Day8 {
   type Board = List[List[Boolean]]
+  val hash = '#'
+  val dot = '.'
 
-  private val startText: String = List.fill(6, 50)('.').map(_.mkString).mkString("\n")
+  private val startText: String = List.fill(6, 50)(dot).map(_.mkString).mkString("\n")
 
   private val rectPattern = """rect (\d+)x(\d+)""".r
   private val rotateColPattern = """rotate column x=(\d+) by (\d+)""".r
@@ -24,7 +26,7 @@ object Day8 {
       board.take(y) ::: (rowRight ::: rowLeft) :: board.drop(y + 1)
     }
 
-    val startBoard = start.split("\n").map(_.map(_ == '#').toList).toList
+    val startBoard = start.split("\n").map(_.map(_ == hash).toList).toList
 
     val result: Board = input.foldLeft(startBoard) {
       case (board, rectPattern(a, b)) => switchRect(board, a.toInt, b.toInt)
@@ -34,8 +36,8 @@ object Day8 {
 
     result.map {
       _.map {
-        case true => '#'
-        case _ => '.'
+        case true => hash
+        case _ => dot
       }.mkString
     }.mkString("\n")
   }
@@ -43,6 +45,6 @@ object Day8 {
   def main(args: Array[String]): Unit = {
     val board = transformBoard(startText, fileLines("/day8.txt"))
     println(board)
-    println(board.count(_ == '#'))
+    println(board.count(_ == hash))
   }
 }

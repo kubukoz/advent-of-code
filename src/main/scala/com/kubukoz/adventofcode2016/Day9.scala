@@ -5,27 +5,21 @@ case class Result(start: Long, end: Long, howMany: Int, multiplier: Int)
 object Day9 {
   private val markerPat = """\((\d+)x(\d+)\)""".r
 
-  private def findPatternInString(source: String): Option[Result] = markerPat.findFirstMatchIn(source) map { matched =>
+  private def findPatternInString(source: String): Option[Result] = markerPat.findFirstMatchIn(source).map { matched =>
     Result(matched.start, matched.end, matched.group(1).toInt, matched.group(2).toInt)
   }
 
-  private def decompressInternal(str: String, recursive: Boolean): Long = findPatternInString(str).map {
+  private def decompressInternal(str: String, transformNested: String => Long): Long = findPatternInString(str).map {
     case Result(start, end, howMany, multiplier) =>
+      val (toDecompress, after) = str.substring(end.toInt).splitAt(howMany)
 
-      val toDecompress = str.substring(end.toInt, end.toInt + howMany)
+      val decompressed = transformNested(toDecompress) * multiplier
 
-      val decompressed = if (recursive)
-        decompressRec(toDecompress)
-      else
-        toDecompress.length
-
-      val after = str.drop(end.toInt + howMany)
-
-      start + decompressed * multiplier + decompressInternal(after, recursive)
+      start + decompressed + decompressInternal(after, transformNested)
   }.getOrElse(str.length)
 
-  val decompress: String => Long = decompressInternal(_, recursive = false)
-  val decompressRec: String => Long = decompressInternal(_, recursive = true)
+  val decompress: String => Long = decompressInternal(_, _.length)
+  val decompressRec: String => Long = decompressInternal(_, decompressRec)
 
   def main(args: Array[String]): Unit = {
     val input = fileLines("/day9.txt")

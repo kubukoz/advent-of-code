@@ -57,7 +57,7 @@ case class ProgramState(bots: Map[Int, Bot], outputs: Map[Int, Int]) {
   }
 
   private def updateTarget(value: Int, target: Receiver) = (target: @unchecked) match {
-    case Receiver("bot", botId) => updateBot(target.receiverId, value)
+    case Receiver("bot", botId) => updateBot(botId, value)
     case Receiver("output", outputId) => copy(outputs = outputs + (outputId -> value))
   }
 

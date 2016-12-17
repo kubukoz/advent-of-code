@@ -19,21 +19,21 @@ object Day11 {
     def blowsUp: Boolean = floors.values.exists {
       case Floor(chips, generators) =>
         chips.exists { chip =>
-          !generators.exists(_.material == chip.material) && generators.nonEmpty
+          !generators.contains(chip) && generators.nonEmpty
         }
     }
 
     def allPossibilities: List[State] = {
-      val Floor(currentChips, currentGenerators) = floors(elevator)
-
       for {
+        Floor(currentChips, currentGenerators) <- floors.get(elevator).toList
         amountOfChips <- (0 to 2).toList
         chipsCombination <- currentChips.subsets(amountOfChips).toSet + Set.empty
 
         gens <- currentGenerators.subsets(2 - amountOfChips).toSet + Set.empty
 
         if gens.nonEmpty || chipsCombination.nonEmpty
-        direction <- Set(-1, 1)
+        canGoDown = floors.filterKeys(_ < elevator).exists(_._2.nonEmpty)
+        direction <- if(canGoDown) Set(-1, 1) else Set(1)
         newFloorNum = elevator + direction
         Floor(targetFloorChips, targetFloorGenerators) <- floors.get(newFloorNum)
 
@@ -42,14 +42,14 @@ object Day11 {
 
         newFloors = floors + (newFloorNum -> newNextFloor) + (elevator -> newCurrentFloor)
       } yield State(newFloorNum, newFloors, history + 1)
-    }.distinct
+    }
 
     def possibilities: List[State] = {
       allPossibilities.filterNot(_.blowsUp)
     }
 
     def isComplete: Boolean = {
-      (floors - 3).values.forall(floor => floor.generators.isEmpty && floor.chips.isEmpty)
+      !(floors - 3).values.exists(_.nonEmpty)
     }
   }
 
@@ -73,8 +73,8 @@ object Day11 {
         val start = Floor(Set.empty, Set.empty)
 
         val floor = elems.split("""((,)? and )|(, )""").foldLeft(start) {
-          case (state, generatorPat(material)) => state.copy(generators = state.generators + Generator(material))
-          case (state, microchipPat(material)) => state.copy(chips = state.chips + Microchip(material))
+          case (state, generatorPat(material)) => state.copy(generators = state.generators + Material.withName(material))
+          case (state, microchipPat(material)) => state.copy(chips = state.chips + Material.withName(material))
           case (state, "nothing relevant") => state
         }
 
@@ -88,13 +88,15 @@ object Day11 {
     val input = fileLines("/day11-real.txt")
     val input2 = fileLines("/day11-real-2.txt")
 
-    println(findShortestPath(parse(input)))
+//    println(findShortestPath(parse(input)))
     println(findShortestPath(parse(input2)))
   }
 }
 
-case class Floor(chips: Set[Microchip], generators: Set[Generator])
+case class Floor(chips: Set[Material.Value], generators: Set[Material.Value]) {
+  def nonEmpty: Boolean = chips.nonEmpty || generators.nonEmpty
+}
 
-case class Microchip(material: String) extends AnyVal
-
-case class Generator(material: String) extends AnyVal
+object Material extends Enumeration{
+  val thulium, promethium, polonium, cobalt, hydrogen, lithium, ruthenium, elerium, dilithium = Value
+}

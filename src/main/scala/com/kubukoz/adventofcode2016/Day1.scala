@@ -42,40 +42,39 @@ object Day1 {
 
     startPosition.distanceTo(firstDoubledPosition)
   }
-}
 
-case class Direction(dx: Int, dy: Int) {
-  def rotate(turn: Turn) = turn match {
-    case Right => copy(-dy, dx)
-    case Left => copy(dy, -dx)
-    case NoTurn => this
+  case class Direction(dx: Int, dy: Int) {
+    def rotate(turn: Turn) = turn match {
+      case Right => copy(-dy, dx)
+      case Left => copy(dy, -dx)
+      case NoTurn => this
+    }
   }
-}
 
-case class State(position: Position, direction: Direction) {
-  def moveBy(move: Move): State = {
-    val newDirection = direction.rotate(move.turn)
+  case class State(position: Position, direction: Direction) {
+    def moveBy(move: Move): State = {
+      val newDirection = direction.rotate(move.turn)
 
-    val newPosition = position.copy(
-      x = position.x + newDirection.dx * move.steps,
-      y = position.y + newDirection.dy * move.steps
-    )
+      val newPosition = position.copy(
+        x = position.x + newDirection.dx * move.steps,
+        y = position.y + newDirection.dy * move.steps
+      )
 
-    State(newPosition, newDirection)
+      State(newPosition, newDirection)
+    }
   }
+
+  case class Move(turn: Turn, steps: Int)
+
+  case class Position(x: Int, y: Int) {
+    def distanceTo(another: Position): Int = math.abs(x - another.x) + math.abs(y - another.y)
+  }
+
+  sealed trait Turn
+
+  case object Left extends Turn
+
+  case object NoTurn extends Turn
+
+  case object Right extends Turn
 }
-
-case class Move(turn: Turn, steps: Int)
-
-case class Position(x: Int, y: Int) {
-  def distanceTo(another: Position): Int = math.abs(x - another.x) + math.abs(y - another.y)
-}
-
-sealed trait Turn
-
-case object Left extends Turn
-
-case object NoTurn extends Turn
-
-case object Right extends Turn
-

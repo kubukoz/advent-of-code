@@ -16,29 +16,23 @@ object Day11 {
   }
 
   case class State(elevator: Int, floors: Map[Int, Floor], history: Int) {
-    def blowsUp: Boolean = floors.values.exists {
-      case Floor(chips, generators) =>
-        chips.exists { chip =>
-          !generators.contains(chip) && generators.nonEmpty
-        }
+    def blowsUp: Boolean = floors.values.exists { floor =>
+      val values = floor.values
+      values.filter(_ <= Bits.materialCount).exists(i => !values.contains(i + Bits.materialCount)) && values.exists(_ > Bits.materialCount)
     }
 
     def allPossibilities: List[State] = {
       for {
-        Floor(currentChips, currentGenerators) <- floors.get(elevator).toList
-        amountOfChips <- (0 to 2).toList
-        chipsCombination <- currentChips.subsets(amountOfChips).toSet + Set.empty
-
-        gens <- currentGenerators.subsets(2 - amountOfChips).toSet + Set.empty
-
-        if gens.nonEmpty || chipsCombination.nonEmpty
-        canGoDown = floors.filterKeys(_ < elevator).exists(_._2.nonEmpty)
-        direction <- if(canGoDown) Set(-1, 1) else Set(1)
+        currentFloor <- floors.get(elevator).toList
+        direction <- Set(-1, 1)
         newFloorNum = elevator + direction
-        Floor(targetFloorChips, targetFloorGenerators) <- floors.get(newFloorNum)
+        Floor(targetFloorValue) <- floors.get(newFloorNum).toList
+        combinationSize <- Set(1, 2)
+        diffCombination <- currentFloor.values.combinations(combinationSize).toList
+        diff = diffCombination.map(i => 1 << (i - 1)).sum
 
-        newCurrentFloor = Floor(currentChips -- chipsCombination, currentGenerators -- gens)
-        newNextFloor = Floor(targetFloorChips ++ chipsCombination, targetFloorGenerators ++ gens)
+        newCurrentFloor = Floor(currentFloor.value - diff)
+        newNextFloor = Floor(targetFloorValue + diff)
 
         newFloors = floors + (newFloorNum -> newNextFloor) + (elevator -> newCurrentFloor)
       } yield State(newFloorNum, newFloors, history + 1)
@@ -70,11 +64,11 @@ object Day11 {
   def parse(input: List[String]): State = {
     val floors = input.map {
       case linePat(floorNum, elems) =>
-        val start = Floor(Set.empty, Set.empty)
+        val start = Floor(0)
 
         val floor = elems.split("""((,)? and )|(, )""").foldLeft(start) {
-          case (state, generatorPat(material)) => state.copy(generators = state.generators + Material.withName(material))
-          case (state, microchipPat(material)) => state.copy(chips = state.chips + Material.withName(material))
+          case (Floor(value), generatorPat(material)) => Floor(value + Bits.withName(material, Bits.materialCount))
+          case (Floor(value), microchipPat(material)) => Floor(value + Bits.withName(material, 0))
           case (state, "nothing relevant") => state
         }
 
@@ -88,15 +82,37 @@ object Day11 {
     val input = fileLines("/day11-real.txt")
     val input2 = fileLines("/day11-real-2.txt")
 
-//    println(findShortestPath(parse(input)))
-    println(findShortestPath(parse(input2)))
+    println(findShortestPath(parse(input)))
+//    println(findShortestPath(parse(input2)))
   }
 }
 
-case class Floor(chips: Set[Material.Value], generators: Set[Material.Value]) {
-  def nonEmpty: Boolean = chips.nonEmpty || generators.nonEmpty
+case class Floor(value: Int) extends AnyVal {
+  def values: List[Int] = (0 until Bits.materialCount + 7).collect {
+    case i if (value & Bits.ones(i)) != 0 => i + 1
+  }.toList
+
+  def nonEmpty: Boolean = value != 0
 }
 
-object Material extends Enumeration{
-  val thulium, promethium, polonium, cobalt, hydrogen, lithium, ruthenium, elerium, dilithium = Value
+object Floor {
+  private val generatorPat = """(\w+)Generator""".r
+
+  def fromStrings(strings: String*): Floor = Floor(strings.map {
+    case generatorPat(name) => Bits.withName(name, Bits.materialCount)
+    case name => Bits.withName(name, 0)
+  }.sum)
+
+  val empty = Floor(0)
+}
+
+object Bits {
+
+  val materials = List("thiulum", "promethium", "polonium", "cobalt", "ruthenium", "elerium", "dilithium")
+
+  val materialCount: Int = materials.length
+
+  def withName(s: String, offset: Int): Int = 1 << materials.indexOf(s) + offset
+
+  def ones(offset: Int): Int = 1 << offset
 }

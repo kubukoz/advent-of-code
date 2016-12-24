@@ -10,16 +10,14 @@ class Day11Tests extends FlatSpec with Matchers {
     0 -> Floor.fromStrings("cobalt", "elerium"),
     1 -> Floor.fromStrings("cobaltGenerator"),
     2 -> Floor.fromStrings("eleriumGenerator"),
-    3 -> Floor.empty), 0)
+    3 -> Floor.empty))
 
-  private val endgame = State(
-    3, Map(
-      0 -> Floor.empty,
-      1 -> Floor.empty,
-      2 -> Floor.empty,
-      3 -> Floor.fromStrings("cobalt", "elerium", "cobaltGenerator", "eleriumGenerator")
-    ), 0
-  )
+  private val endgame = State(3, Map(
+    0 -> Floor.empty,
+    1 -> Floor.empty,
+    2 -> Floor.empty,
+    3 -> Floor.fromStrings("cobalt", "elerium", "cobaltGenerator", "eleriumGenerator")
+  ))
 
   "findShortestPath" should "work" in {
     findShortestPath(parsedStartState) shouldBe 11
@@ -38,7 +36,7 @@ class Day11Tests extends FlatSpec with Matchers {
       0 -> Floor.fromStrings("cobalt"),
       1 -> Floor.fromStrings("elerium", "cobaltGenerator"),
       2 -> Floor.fromStrings("eleriumGenerator"),
-      3 -> Floor.empty), 0).blowsUp shouldBe true
+      3 -> Floor.empty)).blowsUp shouldBe true
   }
 
   it should "be false for the second correct step" in {
@@ -47,7 +45,7 @@ class Day11Tests extends FlatSpec with Matchers {
       1 -> Floor.fromStrings("cobalt", "cobaltGenerator"),
       2 -> Floor.fromStrings("eleriumGenerator"),
       3 -> Floor.empty
-    ), 0).blowsUp shouldBe false
+    )).blowsUp shouldBe false
   }
 
   it should "be false for the third correct step" in {
@@ -56,7 +54,7 @@ class Day11Tests extends FlatSpec with Matchers {
       1 -> Floor.empty,
       2 -> Floor.fromStrings("cobalt", "eleriumGenerator", "cobaltGenerator"),
       3 -> Floor.empty
-    ), 0).blowsUp shouldBe false
+    )).blowsUp shouldBe false
   }
 
   it should "be false for the fourth correct step" in {
@@ -65,7 +63,7 @@ class Day11Tests extends FlatSpec with Matchers {
       1 -> Floor.fromStrings("cobalt"),
       2 -> Floor.fromStrings("eleriumGenerator", "cobaltGenerator"),
       3 -> Floor.empty
-    ), 0).blowsUp shouldBe false
+    )).blowsUp shouldBe false
   }
 
   it should "be false for the fifth correct step" in {
@@ -74,7 +72,7 @@ class Day11Tests extends FlatSpec with Matchers {
       1 -> Floor.empty,
       2 -> Floor.fromStrings("eleriumGenerator", "cobaltGenerator"),
       3 -> Floor.empty
-    ), 0).blowsUp shouldBe false
+    )).blowsUp shouldBe false
   }
 
   "isComplete" should "be false for start" in {
@@ -88,7 +86,6 @@ class Day11Tests extends FlatSpec with Matchers {
   "allPossibilities" should "give 3 results in start state" in {
     parsedStartState.allPossibilities.length shouldBe 3
   }
-
 
   "possibilities" should "give 1 results in start state" in {
     parsedStartState.possibilities.length shouldBe 1
@@ -116,6 +113,6 @@ class Day11Tests extends FlatSpec with Matchers {
   }
 
   "fromStrings" should "work with values" in {
-    Floor.fromStrings(Bits.materials ::: Bits.materials.map(_ + "Generator"):_*).values should contain theSameElementsAs (1 to 14)
+    Floor.fromStrings(Bits.materials ::: Bits.materials.map(_ + "Generator"): _*).values should contain theSameElementsAs (1 to 14)
   }
 }

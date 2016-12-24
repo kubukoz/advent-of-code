@@ -15,7 +15,7 @@ object Day11 {
     case "fourth" => 3
   }
 
-  case class State(elevator: Int, floors: Map[Int, Floor], history: Int) {
+  case class State(elevator: Int, floors: Map[Int, Floor]) {
     def blowsUp: Boolean = floors.values.exists { floor =>
       val values = floor.values
       values.filter(_ <= Bits.materialCount).exists(i => !values.contains(i + Bits.materialCount)) && values.exists(_ > Bits.materialCount)
@@ -35,7 +35,7 @@ object Day11 {
         newNextFloor = Floor(targetFloorValue + diff)
 
         newFloors = floors + (newFloorNum -> newNextFloor) + (elevator -> newCurrentFloor)
-      } yield State(newFloorNum, newFloors, history + 1)
+      } yield State(newFloorNum, newFloors)
     }
 
     def possibilities: List[State] = {
@@ -49,16 +49,16 @@ object Day11 {
 
   def findShortestPath(input: State): Int = {
     @tailrec
-    def goRec(possibilities: List[State]): Int = {
-      possibilities.headOption.map(_.history).foreach { len =>
-        println(s"current depth: $len")
+    def goRec(possibilities: List[State], depth: Int): Int = {
+      println(s"current depth: $depth, possibilities: ${possibilities.length}")
+
+      possibilities.filter(_.isComplete) match {
+        case Nil => goRec(possibilities.flatMap(_.possibilities).distinct, depth + 1)
+        case _ => depth
       }
-      val completes = possibilities.filter(_.isComplete)
-      if (completes.isEmpty) goRec(possibilities.flatMap(_.possibilities).distinct)
-      else completes.head.history
     }
 
-    goRec(input.possibilities)
+    goRec(input.possibilities, 1)
   }
 
   def parse(input: List[String]): State = {
@@ -75,7 +75,7 @@ object Day11 {
         intFromStr(floorNum) -> floor
     }.toMap
 
-    State(0, floors, 0)
+    State(0, floors)
   }
 
   def main(args: Array[String]): Unit = {
@@ -83,7 +83,7 @@ object Day11 {
     val input2 = fileLines("/day11-real-2.txt")
 
     println(findShortestPath(parse(input)))
-//    println(findShortestPath(parse(input2)))
+    //    println(findShortestPath(parse(input2)))
   }
 }
 

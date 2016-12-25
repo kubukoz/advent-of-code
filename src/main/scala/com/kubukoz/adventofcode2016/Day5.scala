@@ -1,10 +1,8 @@
 package com.kubukoz.adventofcode2016
+import com.kubukoz.adventofcode2016.Commons._
 
 object Day5 {
-  private val md = java.security.MessageDigest.getInstance("MD5")
   private val rounds = 8
-
-  private def md5(s: String) = "%1$032X".format(BigInt(1, md.digest(s.getBytes)))
 
   private def findPassword(s: String, validateMd5: String => Boolean, fun: (Int, String) => (Int, Char)): String = {
     @annotation.tailrec

@@ -46,8 +46,8 @@ class Day11Tests extends FlatSpec with Matchers {
       Floor.empty)
   }
 
-  "State.blowsUp" should "be false for the beginning state" in {
-    parsedStartState.blowsUp shouldBe false
+  "FloorMap.blowsUp" should "be false for the beginning state" in {
+    parsedStartState.floors.blowsUp shouldBe false
   }
 
   it should "be true for one of the allPossibilities in the beginning state" in {
@@ -55,7 +55,7 @@ class Day11Tests extends FlatSpec with Matchers {
       0 -> Floor.fromStrings("cobalt"),
       1 -> Floor.fromStrings("elerium", "cobaltGenerator"),
       2 -> Floor.fromStrings("eleriumGenerator"),
-      3 -> Floor.empty))).blowsUp shouldBe true
+      3 -> Floor.empty))).floors.blowsUp shouldBe true
   }
 
   it should "be false for the second correct step" in {
@@ -64,7 +64,7 @@ class Day11Tests extends FlatSpec with Matchers {
       1 -> Floor.fromStrings("cobalt", "cobaltGenerator"),
       2 -> Floor.fromStrings("eleriumGenerator"),
       3 -> Floor.empty
-    ))).blowsUp shouldBe false
+    ))).floors.blowsUp shouldBe false
   }
 
   it should "be false for the third correct step" in {
@@ -73,7 +73,7 @@ class Day11Tests extends FlatSpec with Matchers {
       1 -> Floor.empty,
       2 -> Floor.fromStrings("cobalt", "eleriumGenerator", "cobaltGenerator"),
       3 -> Floor.empty
-    ))).blowsUp shouldBe false
+    ))).floors.blowsUp shouldBe false
   }
 
   it should "be false for the fourth correct step" in {
@@ -82,7 +82,7 @@ class Day11Tests extends FlatSpec with Matchers {
       1 -> Floor.fromStrings("cobalt"),
       2 -> Floor.fromStrings("eleriumGenerator", "cobaltGenerator"),
       3 -> Floor.empty
-    ))).blowsUp shouldBe false
+    ))).floors.blowsUp shouldBe false
   }
 
   it should "be false for the fifth correct step" in {
@@ -91,7 +91,7 @@ class Day11Tests extends FlatSpec with Matchers {
       1 -> Floor.empty,
       2 -> Floor.fromStrings("eleriumGenerator", "cobaltGenerator"),
       3 -> Floor.empty
-    ))).blowsUp shouldBe false
+    ))).floors.blowsUp shouldBe false
   }
 
   "isComplete" should "be false for start" in {

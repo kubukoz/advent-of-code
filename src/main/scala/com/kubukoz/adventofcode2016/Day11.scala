@@ -1,6 +1,9 @@
 package com.kubukoz.adventofcode2016
 
+import com.kubukoz.adventofcode2016.Day11.FloorMap
+
 import scala.annotation.tailrec
+import scala.collection.immutable.Seq
 import scala.language.{postfixOps, reflectiveCalls}
 
 object Day11 {
@@ -17,6 +20,11 @@ object Day11 {
 
   case class FloorMap(value: Long) extends AnyVal {
     def values: Seq[Floor] = (0 until 4).map(getInternal).toList
+
+    def blowsUp = values.exists { floor =>
+      val values = floor.values
+      values.filter(_ <= Bits.materialCount).exists(i => !values.contains(i + Bits.materialCount)) && values.exists(_ > Bits.materialCount)
+    }
 
     def isComplete: Boolean = (value & FloorMap.onesAtFirst3Floors) == 0
 
@@ -45,11 +53,6 @@ object Day11 {
   }
 
   case class State(elevator: Int, floors: FloorMap) {
-    def blowsUp: Boolean = floors.values.exists { floor =>
-      val values = floor.values
-      values.filter(_ <= Bits.materialCount).exists(i => !values.contains(i + Bits.materialCount)) && values.exists(_ > Bits.materialCount)
-    }
-
     def allPossibilities: List[State] = {
       for {
         currentFloor <- floors.get(elevator).toList
@@ -68,7 +71,7 @@ object Day11 {
     }
 
     def possibilities: List[State] = {
-      allPossibilities.filterNot(_.blowsUp)
+      allPossibilities.filterNot(_.floors.blowsUp)
     }
   }
 
@@ -103,11 +106,11 @@ object Day11 {
   }
 
   def main(args: Array[String]): Unit = {
-    val input = fileLines("/day11-real.txt")
+//    val input = fileLines("/day11-real.txt")
     val input2 = fileLines("/day11-real-2.txt")
 
-//    println(findShortestPath(parse(input)))
-        println(findShortestPath(parse(input2)))
+    //    println(findShortestPath(parse(input)))
+    println(findShortestPath(parse(input2)))
   }
 }
 
@@ -139,4 +142,20 @@ object Bits {
   def withName(s: String, offset: Int): Int = 1 << materials.indexOf(s) + offset
 
   def ones(offset: Int): Int = 1 << offset
+
+  def stuff(state: FloorMap, unused: List[Int]): List[FloorMap] = {
+    for {
+      elem <- unused
+      floor <- 0 to 3
+      currentAtFloor <- state.get(floor).toList
+      newState = state.at(floor, currentAtFloor.value + elem)
+      rest <- stuff(newState, unused.filterNot(_ == elem))
+      if !rest.blowsUp
+      _ = println(rest)
+    } yield rest
+  }
+
+  def allMagic = {
+    println(stuff(FloorMap(0), Bits.materials.map(withName(_, 0)) ::: Bits.materials.map(withName(_, 7))).length)
+  }
 }

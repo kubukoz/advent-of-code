@@ -24,7 +24,7 @@ object Day14 {
   def hasSame(count: Int)(hash: String): Boolean = hash.sliding(count).exists(_.distinct.length == 1)
 
   def main(args: Array[String]): Unit = {
-//    keys("ahsbgdzn", times = 1).take(64) foreach println
-    keys("ahsbgdzn", times = 2017).take(64) foreach println
+    println(keys("ahsbgdzn", times = 1)(63))
+    println(keys("ahsbgdzn", times = 2017)(63))
   }
 }

@@ -1,6 +1,6 @@
 package com.kubukoz.adventofcode2016
 
-import com.kubukoz.adventofcode2016.Day11.FloorMap
+import com.kubukoz.adventofcode2016.Bits.floorBits
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
@@ -21,22 +21,23 @@ object Day11 {
   case class FloorMap(value: Long) extends AnyVal {
     def values: Seq[Floor] = (0 until 4).map(getInternal).toList
 
-    def blowsUp = values.exists { floor =>
-      val values = floor.values
-      values.filter(_ <= Bits.materialCount).exists(i => !values.contains(i + Bits.materialCount)) && values.exists(_ > Bits.materialCount)
+    def blowsUp: Boolean = values.exists { floor =>
+      val (materials, generators) = floor.values.partition(_ <= Bits.materialCount)
+
+      materials.exists(i => !generators.contains(i + Bits.materialCount)) && generators.nonEmpty
     }
 
     def isComplete: Boolean = (value & FloorMap.onesAtFirst3Floors) == 0
 
-    private def getInternal(i: Int): Floor = Floor((FloorMap.ones & (value >> 16 * i)).toInt)
+    private def getInternal(i: Int): Floor = Floor((FloorMap.floorOfOnes & (value >> floorBits * i)).toInt)
 
     def get(i: Int): Option[Floor] =
       if (i >= 0 && i <= 3) Some(getInternal(i)) else None
 
     def at(i: Int, newValue: Int): FloorMap = {
-      val cleared = value & ~(FloorMap.ones << i * 16)
+      val cleared = value & ~(FloorMap.floorOfOnes << i * floorBits)
 
-      val updated = cleared | (newValue.toLong << i * 16)
+      val updated = cleared | (newValue.toLong << i * floorBits)
       FloorMap(updated)
     }
   }
@@ -48,17 +49,17 @@ object Day11 {
       }.sum)
     }
 
-    val ones = java.lang.Long.parseLong("1" * 16, 2)
-    val onesAtFirst3Floors = java.lang.Long.parseLong("1" * 16 * 3, 2)
+    val floorOfOnes: Long = java.lang.Long.parseLong("1" * floorBits, 2)
+    val onesAtFirst3Floors: Long = java.lang.Long.parseLong("1" * floorBits * 3, 2)
   }
 
   case class State(elevator: Int, floors: FloorMap) {
-    def allPossibilities: List[State] = {
+    def allPossibilities: Set[State] = {
       for {
-        currentFloor <- floors.get(elevator).toList
+        currentFloor <- floors.get(elevator).toSet[Floor]
         direction <- Set(-1, 1)
         newFloorNum = elevator + direction
-        Floor(targetFloorValue) <- floors.get(newFloorNum).toList
+        Floor(targetFloorValue) <- floors.get(newFloorNum).toSet
         combinationSize <- Set(1, 2)
         diffCombination <- currentFloor.values.combinations(combinationSize)
         diff = diffCombination.map(i => 1 << (i - 1)).sum
@@ -70,22 +71,22 @@ object Day11 {
       } yield State(newFloorNum, newFloors)
     }
 
-    def possibilities: List[State] = {
+    def possibilities: Set[State] = {
       allPossibilities.filterNot(_.floors.blowsUp)
     }
   }
 
   def findShortestPath(input: State): Int = {
     @tailrec
-    def goRec(possibilities: List[State], depth: Int): Int = {
+    def goRec(possibilities: Set[State], alreadySeen: Set[State], depth: Int): Int = {
 
       println(s"depth: $depth")
 
       if (possibilities.exists(_.floors.isComplete)) depth
-      else goRec(possibilities.flatMap(_.possibilities).distinct, depth + 1)
+      else goRec(possibilities.flatMap(_.possibilities) -- alreadySeen, alreadySeen ++ possibilities, depth + 1)
     }
 
-    goRec(input.possibilities, 1)
+    goRec(input.possibilities, Set.empty, 1)
   }
 
   def parse(input: List[String]): State = {
@@ -106,17 +107,17 @@ object Day11 {
   }
 
   def main(args: Array[String]): Unit = {
-//    val input = fileLines("/day11-real.txt")
+    val input = fileLines("/day11-real.txt")
     val input2 = fileLines("/day11-real-2.txt")
 
-    //    println(findShortestPath(parse(input)))
+    println(findShortestPath(parse(input)))
     println(findShortestPath(parse(input2)))
   }
 }
 
 case class Floor(value: Int) extends AnyVal {
   def values: List[Int] = (0 until Bits.materialCount * 2).collect {
-    case i if (value & Bits.ones(i)) != 0 => i + 1
+    case i if (value & (1 << i)) != 0 => i + 1
   }.toList
 
   def nonEmpty: Boolean = value != 0
@@ -139,23 +140,7 @@ object Bits {
 
   val materialCount: Int = materials.length
 
+  val floorBits = 16
+
   def withName(s: String, offset: Int): Int = 1 << materials.indexOf(s) + offset
-
-  def ones(offset: Int): Int = 1 << offset
-
-  def stuff(state: FloorMap, unused: List[Int]): List[FloorMap] = {
-    for {
-      elem <- unused
-      floor <- 0 to 3
-      currentAtFloor <- state.get(floor).toList
-      newState = state.at(floor, currentAtFloor.value + elem)
-      rest <- stuff(newState, unused.filterNot(_ == elem))
-      if !rest.blowsUp
-      _ = println(rest)
-    } yield rest
-  }
-
-  def allMagic = {
-    println(stuff(FloorMap(0), Bits.materials.map(withName(_, 0)) ::: Bits.materials.map(withName(_, 7))).length)
-  }
 }

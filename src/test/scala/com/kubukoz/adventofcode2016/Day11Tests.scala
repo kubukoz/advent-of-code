@@ -103,11 +103,11 @@ class Day11Tests extends FlatSpec with Matchers {
   }
 
   "allPossibilities" should "give 3 results in start state" in {
-    parsedStartState.allPossibilities.length shouldBe 3
+    parsedStartState.allPossibilities.size shouldBe 3
   }
 
   "possibilities" should "give 1 results in start state" in {
-    parsedStartState.possibilities.length shouldBe 1
+    parsedStartState.possibilities.size shouldBe 1
   }
 
   it should "give valid results for the real input" in {
@@ -148,13 +148,6 @@ class Day11Tests extends FlatSpec with Matchers {
         2 -> Floor.empty,
         3 -> Floor.empty)))
     )
-  }
-
-  "ones" should "work" in {
-    Bits.ones(0) shouldBe Integer.parseInt("1", 2)
-    Bits.ones(1) shouldBe Integer.parseInt("10", 2)
-    Bits.ones(2) shouldBe Integer.parseInt("100", 2)
-    Bits.ones(3) shouldBe Integer.parseInt("1000", 2)
   }
 
   "withName" should "work" in {

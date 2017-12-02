@@ -2,7 +2,7 @@ name := "advent-of-code-2016"
 
 version := "1.0"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.4"
 
 resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/"
 

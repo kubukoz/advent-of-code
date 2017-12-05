@@ -2,25 +2,22 @@ package com.kubukoz.adventofcode2017
 
 object Day5 {
 
-  def transform(ints: List[Int], delta: Int => Int): Int = {
-    //Just for performance, I swear
-    val intArray = ints.toArray
+  def transform(intList: List[Int], delta: Int => Int): Int = {
+    val length = intList.length
 
-    val length = ints.length
-
-    def go(index: Int, steps: Int): Int = {
+    def go(ints: Vector[Int], index: Int, steps: Int): Int = {
       if (index > length - 1 || index < 0) steps
       else {
-        val instruction = intArray(index)
+        val instruction = ints(index)
 
-        intArray(index) = delta(instruction) + instruction
+        val newInts = ints.updated(index, delta(instruction) + instruction)
         val newIndex = index + instruction
 
-        go(newIndex, steps + 1)
+        go(newInts, newIndex, steps + 1)
       }
     }
 
-    go(0, 0)
+    go(intList.toVector, 0, 0)
   }
 
   val part1: List[Int] => Int = transform(_, _ => 1)

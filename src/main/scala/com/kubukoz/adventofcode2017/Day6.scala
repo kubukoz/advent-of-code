@@ -3,7 +3,7 @@ package com.kubukoz.adventofcode2017
 import scala.annotation.tailrec
 
 object Day6 {
-  private def maxBlockIndex(blocks: List[Int]): Int = {
+  def maxBlockIndex(blocks: List[Int]): Int = {
     val maxValue = blocks.max
     blocks.zipWithIndex.collectFirst { case (`maxValue`, i) => i }.get
   }
@@ -33,12 +33,18 @@ object Day6 {
     go(blocks, Nil)
   }
 
+  def getResults(blocks: List[Int]): (Int, Int) = {
+    val results = findLoop(blocks)
+
+    val lastResult = results.head
+    (results.size - 1, results.tail.takeWhile(_ != lastResult).size + 1)
+  }
+
   def main(args: Array[String]): Unit = {
     val numbers = fileLines("/day6.txt").flatMap(_.split("""\s+""").map(_.toInt))
-    val results = findLoop(numbers)
-    val lastResult = results.head
+    val results = getResults(numbers)
 
-    println(s"Part 1: ${results.size - 1}")
-    println(s"Part 2: ${results.tail.takeWhile(_ != lastResult).size + 1}")
+    println(s"Part 1: ${results._1}")
+    println(s"Part 2: ${results._2}")
   }
 }

@@ -26,30 +26,31 @@ object Day7 {
       children.map(_.sum).toSet.size > 1
     }
 
+    @tailrec
     def balanceOffset: Option[Int] = {
       val childrenBySum = children.groupBy(_.sum)
       val areSumsEqual = childrenBySum.size <= 1
       if (areSumsEqual) None
-      else for {
-        (wrongSum, offendingChild) <- childrenBySum.collectFirst { case (s, ch :: Nil) => (s, ch) }
-        validSize <- childrenBySum.collectFirst { case (s, _) if s != wrongSum => s }
+      else {
+        val (wrongSum, offendingChild) = childrenBySum.collectFirst { case (s, ch :: Nil) => (s, ch) }.head
+        val validSize = childrenBySum.collectFirst { case (s, _) if s != wrongSum => s }.head
 
-        result <- {
-          if (offendingChild.isUnbalanced) offendingChild.balanceOffset
-          else Some(validSize - (offendingChild.sum - offendingChild.weight))
-        }
-      } yield result
+        if (offendingChild.isUnbalanced) offendingChild.balanceOffset
+        else Some(validSize - (offendingChild.sum - offendingChild.weight))
+      }
     }
   }
 
-  private val pat = """(\w+) \((\d+)\)""".r
-  private val pat2 = """(\w+) \((\d+)\) -> (.+)""".r
+  val parseLine: String => ParsedNode = {
+    val pat = """(\w+) \((\d+)\)""".r
+    val pat2 = """(\w+) \((\d+)\) -> (.+)""".r
 
-  val parse: String => ParsedNode = {
-    case pat(name, weight) =>
-      ParsedNode(name, weight.toInt, Nil)
-    case pat2(name, weight, childList) =>
-      ParsedNode(name, weight.toInt, childList.split(",").map(_.trim).toList)
+    {
+      case pat(name, weight) =>
+        ParsedNode(name, weight.toInt, Nil)
+      case pat2(name, weight, childList) =>
+        ParsedNode(name, weight.toInt, childList.split(",").map(_.trim).toList)
+    }
   }
 
   def buildTree(parsed: List[ParsedNode]): Option[Tree] = {
@@ -82,7 +83,7 @@ object Day7 {
 
   def main(args: Array[String]): Unit = {
     val input = fileLines("/day7.txt")
-    val parsed = input.map(parse)
+    val parsed = input.map(parseLine)
 
     val tree = buildTree(parsed).get
     println(tree.name)

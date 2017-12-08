@@ -17,8 +17,8 @@ object Day8 {
 
   val parse: String => Increment = {
     case incPat(at, word, by, ifAt, opStr, valueAt) =>
-      val byFactor = if (word == "inc") 1 else -1
-      Increment(at, byFactor * by.toInt, ifAt, operators(opStr), valueAt.toInt)
+      val modifySign: Int => Int = if (word == "inc") identity else -_
+      Increment(at, modifySign(by.toInt), ifAt, operators(opStr), valueAt.toInt)
   }
 
   def transform(increments: List[Increment]): List[Map[String, Int]] = {

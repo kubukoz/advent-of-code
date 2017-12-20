@@ -3,13 +3,13 @@ package com.kubukoz.adventofcode2017
 import com.softwaremill.quicklens._
 
 import scala.annotation.tailrec
-import scala.util.{Success, Try}
+import fastparse.all._
 
 object Day18 {
+
   case class State(values: Map[Char, Long], playedFrequencies: List[Long]) {
-    def update(ch: Char, value: Long => Long): State = {
+    def update(ch: Char, value: Long => Long): State =
       copy(values = values.updated(ch, value(values(ch))))
-    }
   }
 
   sealed trait Pointer extends Product with Serializable {
@@ -58,32 +58,26 @@ object Day18 {
     override val modifyState: State => State = identity
   }
 
-  private val anything = """(.+)"""
-  private val char = """(\w)"""
-
-  private val sndPat = s"snd $anything".r
-  private val setPat = s"set $char $anything".r
-  private val addPat = s"add $char $anything".r
-  private val mulPat = s"mul $char $anything".r
-  private val modPat = s"mod $char $anything".r
-  private val rcvPat = s"rcv $char".r
-  private val jgzPat = s"jgz $anything $anything".r
-
-  private val parsePointer: String => Pointer = s =>
-    Try(s.toInt) match {
-      case Success(i) => Constant(i)
-      case _          => Register(s.head)
-  }
-
   private val parse: String => Instruction = {
-    case sndPat(ptr)        => Snd(parsePointer(ptr))
-    case setPat(reg, value) => Set(reg.head, parsePointer(value))
-    case addPat(reg, value) => Add(reg.head, parsePointer(value))
-    case mulPat(reg, value) => Mul(reg.head, parsePointer(value))
-    case modPat(reg, value) => Mod(reg.head, parsePointer(value))
-    case rcvPat(reg)        => Rcv(reg.head)
-    case jgzPat(reg, value) => Jgz(parsePointer(reg), parsePointer(value))
-  }
+    val char: Parser[Char] = P(" ".rep ~ CharIn('a' to 'z').! ~ " ".rep).map(_.head)
+    val number: Parser[Constant] = P(
+      " ".rep ~ ("-".? ~ CharIn('0' to '9').rep(1)).! ~ " ".rep
+    ).map(_.toLong).map(Constant)
+
+    val pointer: Parser[Pointer] = P(
+      char.map(Register) | number
+    )
+
+    val sndPat = P("snd" ~ pointer).map(Snd)
+    val setPat = P("set" ~ char ~ pointer).map(Set.tupled)
+    val addPat = P("add" ~ char ~ pointer).map(Add.tupled)
+    val mulPat = P("mul" ~ char ~ pointer).map(Mul.tupled)
+    val modPat = P("mod" ~ char ~ pointer).map(Mod.tupled)
+    val rcvPat = P("rcv" ~ char).map(Rcv)
+    val jgzPat = P("jgz " ~ pointer ~ pointer).map(Jgz.tupled)
+
+    sndPat | setPat | addPat | mulPat | modPat | rcvPat | jgzPat
+  }.parse(_).get.value
 
   def solve(instructions: List[Instruction]): Long = {
     @tailrec
@@ -103,26 +97,24 @@ object Day18 {
     go(State(Map.empty.withDefaultValue(0), Nil), 0)
   }
 
-  type Inbox = Vector[Long]
-  type Outbox = Option[Long]
-
-  case class Info(state: State,
-                  status: Option[Status],
-                  inbox: Inbox,
-                  outbox: Outbox,
-                  index: Int,
-                  name: String,
-                  everSentValues: Long)
-
-  sealed trait Status extends Product with Serializable
-  case object Waiting extends Status
-  case object Terminated extends Status
-
   def solve2(instructions: List[Instruction]): Long = {
+    case class StateInfo(state: State,
+                         status: Option[Status],
+                         inbox: Vector[Long],
+                         outbox: Option[Long],
+                         index: Int,
+                         name: String,
+                         everSentValues: Long)
+
+    sealed trait Status extends Product with Serializable
+    case object Waiting extends Status
+    case object Terminated extends Status
+
     @tailrec
-    def go(info: Info): Info = {
+    def go(info: StateInfo): StateInfo = {
       instructions.drop(info.index) match {
         case _ if info.status.contains(Terminated) => info
+
         case Rcv(_) :: _ if info.inbox.isEmpty =>
           info.copy(status = Some(Waiting))
 
@@ -144,6 +136,7 @@ object Day18 {
         case Jgz(reg, ptr) :: _ =>
           val indexDelta =
             if (reg.valueIn(info.state) > 0) ptr.valueIn(info.state) else 1
+
           go(info.modify(_.index).using(x => (x + indexDelta).toInt))
 
         case h :: _ =>
@@ -152,49 +145,48 @@ object Day18 {
               .modify(_.state).using(h.modifyState)
               .modify(_.index).using(_ + 1)
           )
+
         case Nil => info.copy(status = Some(Terminated))
       }
     }
 
     @tailrec
     def go2(
-        state1: Info,
-        state2: Info,
+        state1: StateInfo,
+        state2: StateInfo,
         n: Int
-    ): (Info, Info) = {
+    ): (StateInfo, StateInfo) = {
       val run1 = go(state1)
       val run2 = go(state2)
 
-      val terminated1 = run1.status.contains(Terminated) || (
-        run1.status.contains(Waiting) && run2.outbox.isEmpty
-      )
-      val terminated2 = run2.status.contains(Terminated) || (
-        run2.status.contains(Waiting) && run1.outbox.isEmpty
-      )
+      val shouldStopNow = List(run1, run2).permutations.forall { perm =>
+        perm.head.status.exists {
+          case Terminated => true
+          case Waiting if perm.last.outbox.isEmpty => true
+          case _ => false
+        }
+      }
 
-      val shouldStopNow = terminated1 && terminated2
+      def clear(info: StateInfo, appendOutbox: Option[Long]): StateInfo = {
+        info
+          .modify(_.inbox).using(_ ++ appendOutbox.toVector)
+          .modify(_.outbox).setTo(None)
+      }
 
       if (shouldStopNow) {
         (run1, run2)
-      } else
-        go2(
-          run1
-            .modify(_.inbox).using(_ ++ run2.outbox.toVector)
-            .modify(_.outbox).setTo(None),
-          run2
-            .modify(_.inbox).using(_ ++ run1.outbox.toVector)
-            .modify(_.outbox).setTo(None),
-          n + 1
-        )
+      } else go2(clear(run1, run2.outbox), clear(run2, run1.outbox), n + 1)
     }
 
     locally {
       val init = State(Map.empty.withDefaultValue(0), Nil)
-      val initInfo = Info(init, None, Vector.empty, None, 0, "state1", 0)
+      val initInfo = StateInfo(init, None, Vector.empty, None, 0, "state1", 0)
 
       val (_, state2) = go2(
         initInfo,
-        initInfo.copy(name = "state2").modify(_.state.values).using(_.updated('p', 1)),
+        initInfo
+          .modify(_.name).setTo("state2")
+          .modify(_.state.values).using(_.updated('p', 1)),
         1
       )
       state2.everSentValues

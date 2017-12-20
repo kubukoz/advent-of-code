@@ -9,7 +9,7 @@ object Day20 {
   }
 
   case class Info(position: Coords, velocity: Coords, acceleration: Coords)
-  val p = "p=<-435,1273,-382>, v=<-7,-121,-13>, a=<6,3,6>"
+
   val number: Parser[Long] = P(
     "-".? ~ CharIn('0' to '9').rep(min = 1)
   ).!.map(_.toLong)

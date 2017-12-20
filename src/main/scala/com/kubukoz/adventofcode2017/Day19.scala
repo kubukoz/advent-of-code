@@ -48,7 +48,6 @@ object Day19 {
       val newPosition = currentDirection.from(currentPosition)
 
       val goingSideways = Set(Left, Right).contains(currentDirection)
-      val goingUpDown = Set(Up, Down).contains(currentDirection)
 
       def findNotEmpty(atDirections: Direction*) = atDirections.find { dir =>
         path.contains(dir.from(newPosition))
@@ -59,7 +58,7 @@ object Day19 {
         case Some(x) =>
           val newDirection = Some(x).collectFirst {
             case Intersection if goingSideways => findNotEmpty(Up, Down)
-            case Intersection if goingUpDown => findNotEmpty(Left, Right)
+            case Intersection => findNotEmpty(Left, Right)
           }
 
           val newMem = Some(x).collect { case Letter(ch) => ch :: mem }

@@ -63,24 +63,18 @@ object Day22 {
     strings.zipWithIndex
       .flatMap {
         case (line, y) =>
-          line.zipWithIndex.collect { case ('#', x) => Coords(x, y) }
-      }
-      .map {
-        _.modify(_.x).using(_ - dx)
-          .modify(_.y).using(_ - dy) -> Infected
-      }
-      .toMap
+          line.zipWithIndex.collect { case ('#', x) => Coords(x - dx, y - dy) -> Infected }
+      }.toMap.withDefaultValue(Clean)
   }
 
   def burst(state: State,
             changeState: InfectionState => InfectionState): State = {
 
     val position = state.carrier.position
-    val currentState = state.infected.getOrElse(state.carrier.position, Clean)
+    val currentState = state.infected(position)
 
     val newState = changeState(currentState)
-
-    val newDirection: Direction = {
+    val newDirection = {
       val oldDirection = state.carrier.direction
       currentState match {
         case Clean    => oldDirection.previous
@@ -90,13 +84,8 @@ object Day22 {
       }
     }
 
-    val updateMap: (Map[Coords, InfectionState]) => Map[Coords, InfectionState] = {
-      if (newState != Clean) _ + (position -> newState)
-      else _ - position
-    }
-
     state
-      .modify(_.infected).using(updateMap)
+      .modify(_.infected).using(_ + (position -> newState))
       .modify(_.carrier.direction).setTo(newDirection)
       .modify(_.carrier.position).using(newDirection.from)
       .modify(_.gotInfected).setTo(newState == Infected)
@@ -112,17 +101,10 @@ object Day22 {
       gotInfected = false
     )
 
-    @tailrec
-    def go(value: State, amount: Int, f: State => State, mem: Int): Int = {
-      amount match {
-        case 0 => mem
-        case _ =>
-          val result = f(value)
-          go(result, amount - 1, f, if (result.gotInfected) mem + 1 else mem)
-      }
-    }
-
-    go(init, rounds, burst(_, changeState), 0)
+    (1 to rounds).foldLeft((init, 0)) { case ((value, infected), _) =>
+      val result = burst(value, changeState)
+      (result, if (result.gotInfected) infected + 1 else infected)
+    }._2
   }
 
   val part1: (Map[Coords, InfectionState], Int) => Int = transform {

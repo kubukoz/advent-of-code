@@ -1,12 +1,11 @@
 package com.kubukoz.adventofcode2017
 
 object Day24 {
-  case class Component(left: Int, right: Int, swapped: Boolean = false){
+  case class Component(left: Int, right: Int){
     def sum: Int = left + right
-    def swap = Component(right, left, !swapped)
-
-    override def toString: String = if(swapped) swap.toString else s"$left/$right"
+    def swap = Component(right, left)
   }
+
   private val pat = """(\d+)/(\d+)""".r
   private val parse: String => Component = {
     case pat(l, r) => Component(l.toInt, r.toInt)
@@ -30,15 +29,17 @@ object Day24 {
           case (h, i) if lastElem.right == h.right => (h.swap, i)
         }
 
-        mem ++ potentialNext.flatMap { case (next, i) =>
-          go(remove(i, remaining), mem.map(next :: _), next)
+        if (potentialNext.isEmpty) mem else {
+          potentialNext.flatMap { case (next, i) =>
+            go(remove(i, remaining), mem.map(next :: _), next)
+          }.toSet
         }
       }
     }
 
     val startMem = components.zipWithIndex.collect {
-      case (s@Component(0, _, _), i) => (s, i)
-      case (s@Component(_, 0, _), i) => (s.swap, i)
+      case (s@Component(0, _), i) => (s, i)
+      case (s@Component(_, 0), i) => (s.swap, i)
     }
 
     startMem.flatMap { case (init, i) =>

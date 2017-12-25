@@ -21,7 +21,7 @@ object Day24 {
   }
 
   def findCombinations(components: List[Component]): List[List[Component]] = {
-    def go(remaining: List[Component], mem: Set[List[Component]], lastElem: Component): Set[List[Component]] = {
+    def go(remaining: List[Component], mem: List[List[Component]], lastElem: Component): List[List[Component]] = {
       if(remaining.isEmpty) mem
       else {
         val potentialNext = remaining.zipWithIndex.collect {
@@ -32,7 +32,7 @@ object Day24 {
         if (potentialNext.isEmpty) mem else {
           potentialNext.flatMap { case (next, i) =>
             go(remove(i, remaining), mem.map(next :: _), next)
-          }.toSet
+          }
         }
       }
     }
@@ -43,7 +43,7 @@ object Day24 {
     }
 
     startMem.flatMap { case (init, i) =>
-      go(remove(i, components), Set(List(init)), init)
+      go(remove(i, components), List(List(init)), init)
     }
   }
 

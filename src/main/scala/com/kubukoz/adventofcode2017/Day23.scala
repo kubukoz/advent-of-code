@@ -1,13 +1,9 @@
 package com.kubukoz.adventofcode2017
 
-import java.nio.file.{Files, Paths, StandardOpenOption}
-
 import com.softwaremill.quicklens._
-
-import scala.annotation.tailrec
 import fastparse.all._
 
-import scala.io.Source
+import scala.annotation.tailrec
 
 object Day23 {
 
@@ -71,30 +67,14 @@ object Day23 {
       setPat | addPat | mulPat | jnzPat
   }.parse(_).get.value
 
-//  Source.fromFile("./instructions.txt").getLines().mkString("\n")
-  var i = 0
-  def write(ins: Instruction, index: Long) = {
-    import collection.JavaConverters._
-    Files.write(Paths.get("./instructions.txt"), List(s"$i $index").asJava, StandardOpenOption.APPEND, StandardOpenOption.CREATE)
-    i+=1
-  }
-
   def solve(init: State, instructions: List[Instruction]): State = {
     @tailrec
     def go(state: State, index: Long): State = {
-      val nextInstruction = instructions.drop(index.toInt).headOption
-
-      nextInstruction.foreach(write(_, index))
-
-      nextInstruction match {
+      instructions.drop(index.toInt).headOption match {
         case None =>
           state
-//        case Some(h@Jnz(Register('g'), Constant(-8))) =>
-//          go(state.modify(_.values).using(_ ++ List('f' -> 0L, 'g' -> 0L, 'e' -> state.values('b'))), index + 1)
-
-        case Some(h@Jnz(reg, ptr)) if reg.valueIn(state) != 0 =>
+        case Some(Jnz(reg, ptr)) if reg.valueIn(state) != 0 =>
           go(state, index + ptr.valueIn(state))
-
         case Some(h) =>
           go(h.modifyState(state), index + 1)
       }
@@ -102,7 +82,15 @@ object Day23 {
 
     go(init, 0)
   }
-  //(501, 1001)
+
+
+  def solve2(b: Long, c: Long): Int = {
+    (b to c by 17).count { b =>
+      (2L until b).exists { d =>
+        (2.0d until b.toDouble by 1.0).contains(b / d.toDouble)
+      }
+    }
+  }
 
   def main(args: Array[String]): Unit = {
     val fileInput = fileLines("/day23.txt")
@@ -110,10 +98,8 @@ object Day23 {
     val parsed = fileInput.map(parse)
 
     val init1 = State(('a' to 'h').map(_ -> 0L).toMap, 0)
-    val init2 = init1.modify(_.values).using(_ + ('a' -> 1L))
 
-    parsed foreach println
-//    println(solve(init1, parsed).mulsInvoked)
-    println(solve(init2, parsed).values('h'))
+    println(solve(init1, parsed).mulsInvoked)
+    println(solve2(108400L, 125400L))
   }
 }

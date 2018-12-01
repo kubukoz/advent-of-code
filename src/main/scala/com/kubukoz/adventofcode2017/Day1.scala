@@ -6,8 +6,6 @@ import fs2._
 
 object Day1 extends IOApp {
 
-  case class State[S](previous: Set[S], hasRepeated: Boolean)
-
   def findFirstRepeated[F[_]: Sync, S](as: Stream[F, S]): F[Option[S]] = {
     as.zipWithScan(Set.empty[S])(_ + _)
       .collectFirst { case (a, seen) if seen(a) => a }

@@ -23,7 +23,8 @@ object Day2 extends IOApp {
   }
 
   private def values(input: String): (Int, Int) = {
-    val counts = input.toList.groupBy(identity).map(_.map(_.size).swap)
+    val counts: Map[Int, Char] =
+      input.toList.groupBy(identity).map(_.map(_.size).swap)
 
     val hasTwos = counts.isDefinedAt(2) ?? 1
     val hasThrees = counts.isDefinedAt(3) ?? 1

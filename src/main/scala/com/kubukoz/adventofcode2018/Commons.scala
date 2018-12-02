@@ -1,4 +1,4 @@
-package com.kubukoz.adventofcode2017
+package com.kubukoz.adventofcode2018
 
 import java.security.MessageDigest
 

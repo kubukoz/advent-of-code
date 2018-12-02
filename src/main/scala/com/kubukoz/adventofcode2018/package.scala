@@ -5,7 +5,7 @@ import cats.effect.{ContextShift, IO, Resource, Sync}
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 
-package object adventofcode2017 {
+package object adventofcode2018 {
   def blockingEc[F[_]: Sync]: Resource[F, ExecutionContextExecutorService] =
     Resource.make(
       Sync[F].delay(

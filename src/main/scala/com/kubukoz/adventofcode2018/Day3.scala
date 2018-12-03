@@ -44,14 +44,16 @@ object Day3 extends IOApp {
       .compose(modifyBetween(claim.left, claim.width))
       .apply(ClaimedBox.value.modify(claim.id :: _))
 
-  private def singleClaimedAreas(state: ClaimState): Map[ClaimId, Int] = {
-    state.value.foldMap {
-      _.foldMap {
-        case ClaimedBox(List(id)) => Map(id -> 1)
-        case _                    => Map.empty[ClaimId, Int]
+  private def singleClaimedAreas[F[_]: ClaimState.MState]
+    : F[Map[ClaimId, Int]] =
+    ClaimState.MState[F].inspect {
+      _.value.foldMap {
+        _.foldMap {
+          case ClaimedBox(List(id)) => Map(id -> 1)
+          case _                    => Map.empty[ClaimId, Int]
+        }
       }
     }
-  }
 
   def solution[F[_]: ClaimState.MState: Sync: Par: Clock: ConsoleOut](
     lines: Stream[F, String]
@@ -70,10 +72,7 @@ object Day3 extends IOApp {
         .map(_.value.flatten.map(_.value.size).count(_ >= 2))
 
     val getPart2 =
-      ClaimState
-        .MState[F]
-        .get
-        .map(singleClaimedAreas)
+      singleClaimedAreas[F]
         .flatMap { areas =>
           val isFullOnes: Claim => Boolean =
             claim => areas.get(claim.id).contains(claim.area)

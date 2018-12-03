@@ -1,7 +1,10 @@
 package com.kubukoz
-import java.util.concurrent.Executors
+import java.util.concurrent.{Executors, TimeUnit}
 
-import cats.effect.{ContextShift, IO, Resource, Sync}
+import cats.{FlatMap, ~>}
+import cats.effect._
+import cats.syntax.flatMap._
+import cats.syntax.functor._
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 
@@ -28,4 +31,29 @@ package object adventofcode2018 {
         .through(text.utf8Decode)
         .through(text.lines[F])
     }
+
+  def modifyBetween[A](from: Int,
+                       length: Int)(modify: A => A)(as: List[A]): List[A] = {
+    val (before, right) = as.splitAt(from)
+    val (toChange, after) = right.splitAt(length)
+
+    before ::: toChange.map(modify) ::: after
+  }
+
+  def measure[F[_]: Clock: FlatMap: ConsoleOut, A, E](
+    tag: String
+  )(fa: F[A]): F[A] = {
+    val now = Clock[F].monotonic(TimeUnit.MILLISECONDS)
+
+    for {
+      before <- now
+      result <- fa
+      after <- now
+      _ <- ConsoleOut[F].putStrLn(s"$tag took ${after - before}ms")
+    } yield result
+  }
+
+  def measureK[F[_]: Clock: FlatMap: ConsoleOut, E](tag: String): F ~> F =
+    λ[F ~> F](measure(tag)(_))
+
 }

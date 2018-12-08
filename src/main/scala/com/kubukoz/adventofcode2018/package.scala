@@ -5,6 +5,7 @@ import cats.{FlatMap, ~>}
 import cats.effect._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
+import fs2.text
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService}
 
@@ -16,7 +17,7 @@ package object adventofcode2018 {
       )
     )(ec => Sync[F].delay(ec.shutdown()))
 
-  def fileLines[F[_]: Sync: ContextShift](
+  def fileContent[F[_]: Sync: ContextShift](
     fileName: String
   ): fs2.Stream[F, String] =
     fs2.Stream.resource(blockingEc).flatMap[F, String] { ec =>
@@ -29,8 +30,12 @@ package object adventofcode2018 {
           ec
         )
         .through(text.utf8Decode)
-        .through(text.lines[F])
     }
+
+  def fileLines[F[_]: Sync: ContextShift](
+    fileName: String
+  ): fs2.Stream[F, String] =
+    fileContent(fileName).through(text.lines[F])
 
   def modifyBetween[A](from: Int,
                        length: Int)(modify: A => A)(as: List[A]): List[A] = {

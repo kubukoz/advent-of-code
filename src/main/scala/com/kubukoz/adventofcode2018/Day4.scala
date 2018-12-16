@@ -14,8 +14,11 @@ import scalaz.deriving
 
 object day4data {
 
-  @deriving(Order)
+  // @deriving(Order)
   case class GuardId(value: Int) extends AnyVal
+  object GuardId {
+    implicit val order: Order[GuardId] = Order.by(_.value)
+  }
 
   sealed trait EventKind extends Product with Serializable
   case class BeginsShift(guardId: GuardId) extends EventKind
@@ -103,7 +106,7 @@ object Day4 extends IOApp {
 
     val event = {
       val begins =
-        (string("Guard #") *> int.map(GuardId) <* string(" begins shift"))
+        (string("Guard #") *> int.map(GuardId(_)) <* string(" begins shift"))
           .map(BeginsShift)
           .widen[EventKind]
 

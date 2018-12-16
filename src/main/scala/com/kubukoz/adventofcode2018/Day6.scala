@@ -10,9 +10,11 @@ import monocle.{Lens, Prism}
 import monocle.macros.{GenLens, GenPrism, Lenses}
 import scalaz.deriving
 
+import scala.annotation.tailrec
 import scala.collection.immutable.SortedSet
 
 object day6Data {
+  //commented because scalaz-deriving doesn't work with metals
   @deriving(Order, Show)
   case class Coordinate(x: Int, y: Int)
 
@@ -23,6 +25,8 @@ object day6Data {
     def distance(a: Coordinate, b: Coordinate): Int = {
       (a.x - b.x).abs + (a.y - b.y).abs
     }
+
+    // implicit val order: Order[Coordinate] = Order.by(c => (c.x, c.y))
   }
 
   case class Coordinates(value: NonEmptySet[Coordinate]) extends AnyVal
@@ -76,7 +80,7 @@ object Day6 extends IOApp {
 
   import com.olegpy.meow.effects._
 
-  def part1[F[_]: Sync: ContextShift: ConsoleOut]: F[Int] = {
+  private def readCoords[F[_]: Sync: ContextShift] = {
     fileLines("/day6.txt")
       .filter(_.nonEmpty)
       .map {
@@ -85,6 +89,10 @@ object Day6 extends IOApp {
       .compile
       .toList
       .map(_.to[SortedSet])
+  }
+
+  def part1[F[_]: Sync: ContextShift: ConsoleOut]: F[Int] =
+    readCoords[F]
       .flatMap { coords =>
         val maxDistance = getMaxDistance(coords)
 
@@ -98,10 +106,12 @@ object Day6 extends IOApp {
         Ref[F].of(Trip.initialState(coords)).flatMap { ref =>
           implicit val S = ref.stateInstance
 
+          val stepOnce = makeStep[F](maxDistance + 1)
+
           for {
-            _ <- (1 to maxDistance).toList.traverse_[F, Unit](_ => makeStep[F])
+            _ <- (1 to maxDistance).toList.traverse_[F, Unit](_ => stepOnce)
             stateAtMaxDistance <- ref.get
-            _ <- makeStep[F]
+            _ <- stepOnce
             nextState <- ref.get
           } yield {
             val (state1, state2) =
@@ -116,6 +126,28 @@ object Day6 extends IOApp {
         }
       }
 
+  def part2[F[_]: Sync: ContextShift]: F[Int] = readCoords[F].map { coords =>
+    findWhereDistanceLt(10000, coords)
+  }
+
+  private def findWhereDistanceLt(distanceLimit: Int,
+                                  coords: Set[Coordinate]): Int = {
+    @tailrec
+    def go(from: Set[Coordinate], mem: Set[Coordinate]): Int = {
+      val nextMoves = (from.flatMap(moves) -- mem)
+        .filter(totalDistance(_, coords) < distanceLimit)
+
+      if (nextMoves.isEmpty) mem.size
+      else {
+        go(nextMoves, mem ++ nextMoves)
+      }
+    }
+
+    go(coords, Set.empty)
+  }
+
+  private def totalDistance(point: Coordinate, coords: Set[Coordinate]): Int = {
+    coords.unorderedFoldMap(Coordinate.distance(point, _))
   }
 
   private def getMaxDistance(coords: SortedSet[Coordinate]): Int = {
@@ -137,8 +169,9 @@ object Day6 extends IOApp {
     zipped.getOrElse(_, false)
   }
 
-  private def makeStep[F[_]: Trip.State: Coordinates.Ask: FlatMap: ConsoleOut]
-    : F[Unit] =
+  private def makeStep[F[_]: Trip.State: Coordinates.Ask: FlatMap: ConsoleOut](
+    totalRounds: Int
+  ): F[Unit] =
     for {
       coordinates <- Coordinates.Ask[F].ask
       before <- Trip.State.get
@@ -149,7 +182,7 @@ object Day6 extends IOApp {
         coord => (coord, getUsageStatus(coord, coordinates))
       )
 
-      _ <- ConsoleOut[F].putStrLn(s"round ${before.round}")
+      _ <- ConsoleOut[F].putStrLn(s"Part 1 round ${before.round}/$totalRounds")
 
       _ <- Trip.State.modify {
         Trip.latestRoots.set(newPoints) compose
@@ -182,6 +215,9 @@ object Day6 extends IOApp {
     implicit val console = Console.io
     import console._
 
-    part1[IO].flatMap(putStrLn(_)).as(ExitCode.Success)
+    (part1[IO], part2[IO])
+      .parMapN(putStrLn(_) *> putStrLn(_))
+      .flatten
+      .as(ExitCode.Success)
   }
 }

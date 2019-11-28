@@ -4,8 +4,10 @@ import           Core
 import           Data.List
 import           Data.Foldable
 
+file = readWhole (Day 0)
+
 main = do
-  content <- readWhole (Day 0)
+  content <- file
   print . getLevel $ content
   print . basementLevel $ content
 

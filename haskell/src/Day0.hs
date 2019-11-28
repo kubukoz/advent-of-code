@@ -11,10 +11,12 @@ main = do
 
 
 getLevel :: String -> Int
-getLevel = sum . map parseToDiff
+getLevel = last . sums
 
 basementLevel :: String -> Maybe Int
-basementLevel = findIndex (0 >) . scanl (+) 0 . map parseToDiff
+basementLevel = findIndex (0 >) . sums
+
+sums = scanl (+) 0 . map parseToDiff
 
 parseToDiff '(' = 1
 parseToDiff ')' = -1

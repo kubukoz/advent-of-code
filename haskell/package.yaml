@@ -1,44 +1,33 @@
-name:                advent-of-code-v2019
-version:             0.1.0.0
-github:              "kubukoz/advent-of-code-v2019"
-license:             MIT
-author:              "Jakub Kozłowski"
-maintainer:          "kubukoz@gmail.com"
-copyright:           "2019 Jakub Kozłowski"
-
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
-
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/advent-of-code-v2019#readme>
-
-dependencies:
-- base >= 4.7 && < 5
-
 library:
   source-dirs: src
-
-executables:
-  advent-of-code-v2019-exe:
-    main:                Main.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - advent-of-code-v2019
-
 tests:
   advent-of-code-v2019-test:
-    main:                Spec.hs
-    source-dirs:         test
+    source-dirs: test
+    main: Spec.hs
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - advent-of-code-v2019
+copyright: 2019 Jakub Kozłowski
+maintainer: kubukoz@gmail.com
+dependencies:
+- mtl
+- base >= 4.7 && < 5
+name: advent-of-code-v2019
+version: 0.1.0.0
+author: Jakub Kozłowski
+github: kubukoz/advent-of-code-v2019
+license: MIT
+executables:
+  advent-of-code-v2019-exe:
+    source-dirs: app
+    main: Main.hs
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - advent-of-code-v2019
+description: Please see the README on GitHub at <https://github.com/githubuser/advent-of-code-v2019#readme>

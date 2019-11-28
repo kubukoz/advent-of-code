@@ -1,14 +1,10 @@
 name:                advent-of-code-v2019
 version:             0.1.0.0
-github:              "githubuser/advent-of-code-v2019"
-license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2019 Author name here"
-
-extra-source-files:
-- README.md
-- ChangeLog.md
+github:              "kubukoz/advent-of-code-v2019"
+license:             MIT
+author:              "Jakub Kozłowski"
+maintainer:          "kubukoz@gmail.com"
+copyright:           "2019 Jakub Kozłowski"
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package

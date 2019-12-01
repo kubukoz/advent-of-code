@@ -12,13 +12,13 @@ fuelRec n = current + remaining where
   remaining | current == 0 = 0
             | otherwise    = fuelRec current
 
-forEachModule :: (Int -> Int) -> [String] -> IO Int
-forEachModule getFuel = fmap (sum . fmap getFuel) . traverse readIO
+forEachModule :: (Int -> Int) -> [String] -> Int
+forEachModule getFuel = sum . fmap (getFuel . read)
 
 part1 = forEachModule fuel
 part2 = forEachModule fuelRec
 
 main = do
   content <- file
-  part1 content >>= print
-  part2 content >>= print
+  print (part1 content)
+  print (part2 content)

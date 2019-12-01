@@ -14,7 +14,7 @@ day0 = describe "Day0" $ do
 
 
 day1 = describe "Day1" $ do
-  it "succeeds in first part" $ Day1.part1 `shouldReturnWithLinesM` 3402634
-  it "succeeds in second part" $ Day1.part2 `shouldReturnWithLinesM` 5101069
-  where a `shouldReturnWithLinesM` b = (Day1.file >>= a) `shouldReturn` b
+  it "succeeds in first part" $ Day1.part1 `shouldReturnWithLines` 3402634
+  it "succeeds in second part" $ Day1.part2 `shouldReturnWithLines` 5101069
+  where a `shouldReturnWithLines` b = (a <$> Day1.file) `shouldReturn` b
 

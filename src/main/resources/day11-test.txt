@@ -1,0 +1,4 @@
+The first floor contains a cobalt-compatible microchip and a elerium-compatible microchip.
+The second floor contains a cobalt generator.
+The third floor contains a elerium generator.
+The fourth floor contains nothing relevant.

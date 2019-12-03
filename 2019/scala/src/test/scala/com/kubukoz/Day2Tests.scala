@@ -1,10 +1,10 @@
 package com.kubukoz
 
-import org.scalatest.Matchers
-import org.scalatest.WordSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import com.kubukoz.aoc.Day2
 
-class Day2Tests extends WordSpec with Matchers {
+class Day2Tests extends AnyWordSpec with Matchers {
   "part1" when {
     genTests(
       "1,9,10,3,2,3,11,0,99,30,40,50" -> 3500,

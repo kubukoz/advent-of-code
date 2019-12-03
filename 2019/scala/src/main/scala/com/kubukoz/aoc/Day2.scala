@@ -84,7 +84,7 @@ object Day2 extends IOApp {
     } as ExitCode.Success
 
   def parse(input: String): Program = {
-    val tokens = input.split(",").map(Token.parse).toList
+    val tokens = input.split(",").toList.map(Token.parse)
     Program(tokens, Position(0).some)
   }
 

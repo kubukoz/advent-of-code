@@ -32,14 +32,17 @@ object data {
   object Program {
     type MState[F[_]] = MonadState[F, Program]
 
-    def tokenAt(position: Int): Optional[Program, Token] = tokens.composeOptional(Index.index(position))
+    def tokenAt(position: Int): Optional[Program, Token] =
+      tokens.composeOptional(Index.index(position))
   }
 
   sealed trait Instruction extends Product with Serializable
 
   object Instruction {
-    case object Halt                                                                           extends Instruction
-    final case class Combine(from: NonEmptyList[Position], to: Position, combine: Combine.Way) extends Instruction
+    case object Halt extends Instruction
+
+    final case class Combine(from: NonEmptyList[Position], to: Position, combine: Combine.Way)
+        extends Instruction
 
     object Combine {
       sealed trait Way extends Product with Serializable
@@ -100,7 +103,10 @@ object Interpreter {
 
     def atPosition(pos: Position): F[Token] =
       State.inspect(
-        Program.tokenAt(pos.position).getOption(_).getOrElse(throw new Exception(s"No token at position $pos"))
+        Program
+          .tokenAt(pos.position)
+          .getOption(_)
+          .getOrElse(throw new Exception(s"No token at position $pos"))
       )
 
     def setAtPosition(pos: Position, token: Token): F[Unit] =
@@ -118,7 +124,8 @@ object Interpreter {
           prog.nextPosition.map(_.position + 4).filter(_ < prog.tokens.length).map(Position)
         }
 
-        def jumpTo(position: Option[Position]): F[Unit] = State.modify(Program.nextPosition.set(position))
+        def jumpTo(position: Option[Position]): F[Unit] =
+          State.modify(Program.nextPosition.set(position))
 
         for {
           newValue <- from.nonEmptyTraverse(atPosition).map(_.reduceLeft(reduce))
@@ -167,11 +174,16 @@ object Day2 extends IOApp {
     i.runWithParams(12, 2) *> i.getOutput
   }
 
-  def part2(input: Program): IO[Option[Int]] = Interpreter.fromInput[IO](input).flatMap { i =>
+  def part2(input: Program): IO[Option[Int]] = {
     val range = fs2.Stream.range(0, 100)
 
     (range, range).tupled.evalMap {
-      case (noun, verb) => i.runWithParams(noun, verb) *> i.getOutput.map((noun, verb, _))
+      case (noun, verb) =>
+        Interpreter
+          .fromInput[IO](input)
+          .flatTap(_.runWithParams(noun, verb))
+          .flatMap(_.getOutput)
+          .map((noun, verb, _))
     }.collectFirst {
       case (noun, verb, 19690720) => 100 * noun + verb
     }.compile.last
@@ -182,5 +194,9 @@ object Day2 extends IOApp {
 object Util {
 
   def readFile[F[_]: Sync: ContextShift](name: String, blocker: Blocker): F[String] =
-    fs2.io.file.readAll(Paths.get(name), blocker, 4096).through(fs2.text.utf8Decode[F]).compile.string
+    fs2.io.file
+      .readAll(Paths.get(name), blocker, 4096)
+      .through(fs2.text.utf8Decode[F])
+      .compile
+      .string
 }

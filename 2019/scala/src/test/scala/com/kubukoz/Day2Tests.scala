@@ -3,6 +3,9 @@ package com.kubukoz
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import com.kubukoz.aoc.Day2
+import com.kubukoz.aoc.Interpreter
+import cats.effect.SyncIO
+import cats.implicits._
 
 class Day2Tests extends AnyWordSpec with Matchers {
   "part1" when {
@@ -19,7 +22,12 @@ class Day2Tests extends AnyWordSpec with Matchers {
     case (input, out) =>
       input should {
         "be " + out in {
-          Day2.ProgramState.runProgram.runS(Day2.parse(input)).value.tokens.head.token shouldBe out
+          Interpreter
+            .fromInput[SyncIO](Day2.parse(input))
+            .flatTap(_.runProgram)
+            .flatMap(_.getOutput)
+            .map(_ shouldBe out)
+            .unsafeRunSync()
         }
       }
 

@@ -2,8 +2,8 @@ package com.kubukoz
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import com.kubukoz.aoc.Day2
-import com.kubukoz.aoc.Interpreter
+import com.kubukoz.aoc.day2.Day2
+import com.kubukoz.aoc.day2.Interpreter
 import cats.effect.SyncIO
 import cats.implicits._
 
@@ -24,8 +24,7 @@ class Day2Tests extends AnyWordSpec with Matchers {
         "be " + out in {
           Interpreter
             .fromInput[SyncIO](Day2.parse(input))
-            .flatTap(_.runProgram)
-            .flatMap(_.getOutput)
+            .flatMap(_.runProgram)
             .map(_ shouldBe out)
             .unsafeRunSync()
         }

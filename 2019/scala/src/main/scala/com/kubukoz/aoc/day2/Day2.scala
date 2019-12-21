@@ -1,4 +1,4 @@
-package com.kubukoz.aoc
+package com.kubukoz.aoc.day2
 
 import cats.effect.IOApp
 import cats.effect.{ExitCode, IO}
@@ -8,18 +8,17 @@ import cats.effect.ContextShift
 import cats.effect.Console.io._
 import cats.implicits._
 import java.nio.file.Paths
-import io.estatico.newtype.macros.newtype
 import cats.data.NonEmptyList
 import monocle.macros.Lenses
 import monocle.function.Index
 import monocle.Optional
-import com.kubukoz.aoc.data.Instruction.Combine.Way
+import com.kubukoz.aoc.day2.data.Instruction.Combine.Way
 import com.olegpy.meow.prelude._
 import com.olegpy.meow.effects._
 import cats.mtl.MonadState
-import com.kubukoz.aoc.data.Token
-import com.kubukoz.aoc.data.Position
-import com.kubukoz.aoc.data.Program
+import com.kubukoz.aoc.day2.data.Token
+import com.kubukoz.aoc.day2.data.Position
+import com.kubukoz.aoc.day2.data.Program
 import cats.effect.concurrent.Ref
 
 object data {
@@ -80,9 +79,8 @@ object data {
 }
 
 trait Interpreter[F[_]] {
-  def runWithParams(noun: Int, verb: Int): F[Unit]
-  def runProgram: F[Unit]
-  def getOutput: F[Int]
+  def runProgram: F[Int]
+  def setParams(noun: Int, verb: Int): F[Unit]
 }
 
 object Interpreter {
@@ -91,6 +89,9 @@ object Interpreter {
     implicit val MS = ref.stateInstance
     statefulInstance[F]
   }
+
+  def fromInputWithParams[F[_]: Sync](input: Program, noun: Int, verb: Int): F[Interpreter[F]] =
+    fromInput[F](input).flatTap(_.setParams(noun, verb))
 
   def statefulInstance[F[_]: Program.MState]: Interpreter[F] = new Interpreter[F] {
     val State = implicitly[Program.MState[F]]
@@ -137,16 +138,16 @@ object Interpreter {
 
     val getOutput: F[Int] = State.inspect(_.tokens.head.token)
 
-    val runProgram: F[Unit] = nextOp.flatMap(runOp).whileM_(running)
+    val runProgram: F[Int] = nextOp.flatMap(runOp).whileM_(running) *> getOutput
 
-    def runWithParams(noun: Int, verb: Int): F[Unit] = {
+    def setParams(noun: Int, verb: Int): F[Unit] = {
       val before =
         Program.tokens
           .composeOptional(Index.index(1))
           .set(Token(noun))
           .compose(Program.tokens.composeOptional(Index.index(2)).set(Token(verb)))
 
-      State.modify(before) *> runProgram
+      State.modify(before)
     }
 
   }
@@ -170,9 +171,8 @@ object Day2 extends IOApp {
     Program(tokens, Position(0).some)
   }
 
-  def part1(input: Program): IO[Int] = Interpreter.fromInput[IO](input).flatMap { i =>
-    i.runWithParams(12, 2) *> i.getOutput
-  }
+  def part1(input: Program): IO[Int] =
+    Interpreter.fromInputWithParams[IO](input, 12, 2).flatMap(_.runProgram)
 
   def part2(input: Program): IO[Option[Int]] = {
     val range = fs2.Stream.range(0, 100)
@@ -180,9 +180,8 @@ object Day2 extends IOApp {
     (range, range).tupled.evalMap {
       case (noun, verb) =>
         Interpreter
-          .fromInput[IO](input)
-          .flatTap(_.runWithParams(noun, verb))
-          .flatMap(_.getOutput)
+          .fromInputWithParams[IO](input, noun, verb)
+          .flatMap(_.runProgram)
           .map((noun, verb, _))
     }.collectFirst {
       case (noun, verb, 19690720) => 100 * noun + verb

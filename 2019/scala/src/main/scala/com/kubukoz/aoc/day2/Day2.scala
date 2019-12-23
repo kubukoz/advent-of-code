@@ -3,16 +3,14 @@ package com.kubukoz.aoc.day2
 import cats.effect.IOApp
 import cats.effect.{ExitCode, IO}
 import cats.effect.Sync
-import cats.effect.Blocker
-import cats.effect.ContextShift
 import cats.effect.Console.io._
 import cats.implicits._
-import java.nio.file.Paths
 import cats.data.NonEmptyList
 import monocle.macros.Lenses
 import monocle.function.Index
 import monocle.Optional
 import com.kubukoz.aoc.day2.data.Instruction.Combine.Way
+import com.kubukoz.aoc.Util
 import com.olegpy.meow.prelude._
 import com.olegpy.meow.effects._
 import cats.mtl.MonadState
@@ -21,7 +19,7 @@ import com.kubukoz.aoc.day2.data.Position
 import com.kubukoz.aoc.day2.data.Program
 import cats.effect.concurrent.Ref
 
-object data {
+private[day2] object data {
 
   @Lenses
   final case class Program(tokens: List[Token], nextPosition: Option[Position])
@@ -158,12 +156,10 @@ object Day2 extends IOApp {
   import data._
 
   def run(args: List[String]): IO[ExitCode] =
-    Blocker[IO].use { blocker =>
-      Util.readFile[IO]("files/day2.txt", blocker).flatMap { file =>
-        val parsed = parse(file)
-        part1(parsed).flatMap(putStrLn(_)) *>
-          part2(parsed).flatMap(putStrLn(_))
-      }
+    Util.readFile[IO]("files/day2.txt").flatMap { file =>
+      val parsed = parse(file)
+      part1(parsed).flatMap(putStrLn(_)) *>
+        part2(parsed).flatMap(putStrLn(_))
     } as ExitCode.Success
 
   def parse(input: String): Program = {
@@ -188,14 +184,4 @@ object Day2 extends IOApp {
     }.compile.last
   }
 
-}
-
-object Util {
-
-  def readFile[F[_]: Sync: ContextShift](name: String, blocker: Blocker): F[String] =
-    fs2.io.file
-      .readAll(Paths.get(name), blocker, 4096)
-      .through(fs2.text.utf8Decode[F])
-      .compile
-      .string
 }

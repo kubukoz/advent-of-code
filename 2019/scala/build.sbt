@@ -6,12 +6,12 @@ val compilerPlugins = List(
 val commonSettings = Seq(
   scalaVersion := "2.13.1",
   scalacOptions ~= (_.filterNot(_ == "-Xfatal-warnings") ++ Seq("-Ymacro-annotations")),
-  fork in Test := true,
   name := "scala",
   updateOptions := updateOptions.value.withGigahorse(false),
   libraryDependencies ++= Seq(
     "co.fs2"                     %% "fs2-io"           % "2.1.0",
     "dev.profunktor"             %% "console4cats"     % "0.8.0",
+    "io.chrisdavenport"          %% "semigroups"       % "0.2.0",
     "com.olegpy"                 %% "meow-mtl-core"    % "0.4.0",
     "com.olegpy"                 %% "meow-mtl-effects" % "0.4.0",
     "io.estatico"                %% "newtype"          % "0.4.3",
@@ -23,4 +23,9 @@ val commonSettings = Seq(
 val core = project.settings(commonSettings).settings(name += "-core")
 
 val aoc =
-  project.in(file(".")).settings(commonSettings).settings(skip in publish := true).dependsOn(core).aggregate(core)
+  project
+    .in(file("."))
+    .settings(commonSettings)
+    .settings(skip in publish := true)
+    .dependsOn(core)
+    .aggregate(core)

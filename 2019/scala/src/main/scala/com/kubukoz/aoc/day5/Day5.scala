@@ -39,6 +39,9 @@ private[day5] object data {
     final case class Combine(from: NonEmptyList[Position], to: Position, combine: Combine.Way)
         extends Instruction
 
+    final case class Save(at: Position)   extends Instruction
+    final case class Load(from: Position) extends Instruction
+
     object Combine {
       sealed trait Way extends Product with Serializable
 
@@ -49,9 +52,11 @@ private[day5] object data {
     }
 
     val decode: PartialFunction[List[Token], Instruction] = {
-      case Token.Halt :: _                         => Instruction.Halt
+      case Token.Halt :: _                         => Halt
       case Token.Add :: from1 :: from2 :: to :: _  => combine(from1, from2, to, Combine.Way.Add)
       case Token.Mult :: from1 :: from2 :: to :: _ => combine(from1, from2, to, Combine.Way.Mult)
+      case Token.Save :: at :: _                   => Save(toPosition(at))
+      case Token.Load :: from :: _                 => Load(toPosition(from))
     }
 
     private val toPosition: Token => Position = t => Position(t.token)
@@ -69,6 +74,8 @@ private[day5] object data {
     val Halt = Token(99)
     val Add  = Token(1)
     val Mult = Token(2)
+    val Save = Token(3)
+    val Load = Token(4)
 
     val parse: String => Token = s => Token(s.trim.toInt)
   }

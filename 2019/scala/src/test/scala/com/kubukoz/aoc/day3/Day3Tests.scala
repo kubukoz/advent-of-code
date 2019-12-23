@@ -1,9 +1,8 @@
-package com.kubukoz
+package com.kubukoz.aoc.day3
 
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.matchers.should.Matchers
-import com.kubukoz.aoc.day3.Day3
 import cats.implicits._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
 class Day3Tests extends AnyWordSpec with Matchers {
 

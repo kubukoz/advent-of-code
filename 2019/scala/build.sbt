@@ -12,6 +12,7 @@ val commonSettings = Seq(
     "co.fs2"                     %% "fs2-io"           % "2.1.0",
     "dev.profunktor"             %% "console4cats"     % "0.8.0",
     "io.chrisdavenport"          %% "semigroups"       % "0.2.0",
+    "io.chrisdavenport"          %% "monoids"          % "0.2.0",
     "com.olegpy"                 %% "meow-mtl-core"    % "0.4.0",
     "com.olegpy"                 %% "meow-mtl-effects" % "0.4.0",
     "io.estatico"                %% "newtype"          % "0.4.3",

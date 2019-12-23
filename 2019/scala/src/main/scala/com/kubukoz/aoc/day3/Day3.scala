@@ -8,7 +8,7 @@ import com.kubukoz.aoc.Util
 import com.kubukoz.aoc.day3.data._
 import io.chrisdavenport.semigroups.Min
 
-object Day3 extends IOApp {
+private[day3] object Day3 extends IOApp {
 
   def parseLine(s: String): PathDescription = {
     val steps = s

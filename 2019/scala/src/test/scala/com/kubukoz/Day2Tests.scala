@@ -5,7 +5,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import com.kubukoz.aoc.day2.Day2
 import com.kubukoz.aoc.day2.Interpreter
 import cats.effect.SyncIO
-import cats.implicits._
 
 class Day2Tests extends AnyWordSpec with Matchers {
   "part1" when {

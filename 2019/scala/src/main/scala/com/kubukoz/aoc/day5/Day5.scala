@@ -1,21 +1,21 @@
 package com.kubukoz.aoc.day5
 
-import cats.effect.IOApp
-import cats.effect.{ExitCode, IO}
-import cats.effect.Sync
-import cats.effect.Console.io._
-import cats.implicits._
 import cats.data.NonEmptyList
-import monocle.macros.Lenses
-import monocle.function.Index
-import monocle.Optional
-import com.kubukoz.aoc.day5.data.Instruction.Combine.Way
-import com.kubukoz.aoc.Util
-import com.olegpy.meow.prelude._
-import com.olegpy.meow.effects._
-import cats.mtl.MonadState
-import com.kubukoz.aoc.day5.data.Program
+import cats.effect.Console.io._
+import cats.effect.Console.implicits._
+import cats.effect.Console
 import cats.effect.concurrent.Ref
+import cats.effect.{ExitCode, IO, IOApp, Sync}
+import cats.implicits._
+import cats.mtl.MonadState
+import com.kubukoz.aoc.Util
+import com.kubukoz.aoc.day5.data.Instruction.Combine.Way
+import com.kubukoz.aoc.day5.data.{Program, Token}
+import com.olegpy.meow.effects._
+import com.olegpy.meow.prelude._
+import monocle.Optional
+import monocle.function.Index
+import monocle.macros.Lenses
 
 private[day5] object data {
 
@@ -54,19 +54,25 @@ private[day5] object data {
 
     val decode: PartialFunction[List[Token], Instruction] = {
       case Token.Halt :: _ => Halt
-      case Token.Add(modes) :: from1 :: from2 :: to :: _ =>
+      case Token.header(Token.Add, modes) :: from1 :: from2 :: to :: _ =>
         combine(modes, from1, from2, to, Combine.Way.Add)
-      case Token.Mult(modes) :: from1 :: from2 :: to :: _ =>
+      case Token.header(Token.Mult, modes) :: from1 :: from2 :: to :: _ =>
         combine(modes, from1, from2, to, Combine.Way.Mult)
-      case Token.Save :: at :: _          => Save(toPosition(at))
-      case Token.Load(modes) :: from :: _ => Load(from.withMode(modes.values(0)))
+      case Token.header(Token.Save, _) :: at :: _       => Save(toPosition(at))
+      case Token.header(Token.Load, modes) :: from :: _ => Load(from.withMode(modes(0)))
     }
 
-    private def combine(modes: Modes, from1: Token, from2: Token, to: Token, merge: Combine.Way) =
+    private def combine(
+      modes: List[Mode],
+      from1: Token,
+      from2: Token,
+      to: Token,
+      merge: Combine.Way
+    ) =
       Instruction.Combine(
         NonEmptyList.of(
-          from1.withMode(modes.values(0)),
-          from2.withMode(modes.values(1))
+          from1.withMode(modes(0)),
+          from2.withMode(modes(1))
         ),
         toPosition(to),
         merge
@@ -92,6 +98,25 @@ private[day5] object data {
     def mult(another: Token): Token = Token(token * another.token)
   }
 
+  object Token {
+    val parse: String => Token = s => Token(s.toInt)
+
+    object header {
+
+      def unapply(token: Token): Some[(Token, List[Mode])] = {
+        val h = CommandHeader.parser(token.token.toString)
+        Some((h.kind, h.modes))
+      }
+
+    }
+
+    val Halt: Token = Token(99)
+    val Add: Token  = Token(1)
+    val Mult: Token = Token(2)
+    val Save: Token = Token(3)
+    val Load: Token = Token(4)
+  }
+
   sealed trait Mode extends Product with Serializable
 
   object Mode {
@@ -99,47 +124,51 @@ private[day5] object data {
     case object Immediate  extends Mode
   }
 
-  final case class Modes(values: List[Mode])
+  final case class CommandHeader(modes: List[Mode], kind: Token)
 
-  object Token {
-    val Halt = Token(99)
+  object CommandHeader {
 
-    object Add {
-      //opcode 01 / 1
-      def unapply(tok: Token): Option[Modes] = ???
+    val parser: String => CommandHeader = { s =>
+      val modes = s
+        .dropRight(2)
+        .map {
+          case '0' => Mode.Positional
+          case '1' => Mode.Immediate
+        }
+        .toList
+        .reverse
+        .padTo(3, Mode.Positional)
+
+      val cmd = Token(s.takeRight(2).last.toString.toInt)
+
+      CommandHeader(modes, cmd)
     }
-
-    object Mult {
-      //opcode 02 / 2
-      def unapply(tok: Token): Option[Modes] = ???
-    }
-    val Save = Token(3)
-
-    object Load {
-      //opcode 04 / 4
-      def unapply(tok: Token): Option[Modes] = ???
-    }
-
-    val parse: String => Token = s => Token(s.trim.toInt)
   }
 }
 
 trait Interpreter[F[_]] {
+  def getStackHead: F[Token]
+  def push(token: Token): F[Unit]
   def runProgram: F[Int]
   def setParams(noun: Int, verb: Int): F[Unit]
 }
 
 object Interpreter {
 
-  def fromInput[F[_]: Sync](input: Program): F[Interpreter[F]] = Ref[F].of(input).map { ref =>
-    implicit val MS = ref.stateInstance
-    statefulInstance[F]
+  def fromInput[F[_]: Sync: Console](input: Program): F[Interpreter[F]] = Ref[F].of(input).map {
+    ref =>
+      implicit val MS = ref.stateInstance
+      statefulInstance[F]
   }
 
-  def fromInputWithParams[F[_]: Sync](input: Program, noun: Int, verb: Int): F[Interpreter[F]] =
+  def fromInputWithParams[F[_]: Sync: Console](
+    input: Program,
+    noun: Int,
+    verb: Int
+  ): F[Interpreter[F]] =
     fromInput[F](input).flatTap(_.setParams(noun, verb))
 
-  def statefulInstance[F[_]: Program.MState]: Interpreter[F] = new Interpreter[F] {
+  def statefulInstance[F[_]: Program.MState: Console]: Interpreter[F] = new Interpreter[F] {
     val State: Program.MState[F] = implicitly[Program.MState[F]]
     import data._
 
@@ -157,12 +186,14 @@ object Interpreter {
       )
 
     def setAtPosition(pos: Position, token: Token): F[Unit] =
-      State.modify(Program.tokenAt(pos.position).set(token))
+      State.modify(a => Program.tokenAt(pos.position).set(token)(a))
 
     val dereference: Reference => F[Token] = {
       case Reference.ByValue(v)      => Token(v).pure[F]
       case Reference.ByPosition(pos) => atPosition(pos)
     }
+
+    val getStackHead: F[Token] = State.inspect(Program.stack.get(_).head)
 
     def push(token: Token): F[Unit] = State.modify(Program.stack.modify(token :: _))
 
@@ -172,16 +203,17 @@ object Interpreter {
     def jumpTo(position: Option[Position]): F[Unit] =
       State.modify(Program.nextPosition.set(position))
 
-    def nextPosition(steps: Int) = State.inspect { prog =>
+    def nextPosition(steps: Int): F[Option[Position]] = State.inspect { prog =>
       prog.nextPosition.map(_.position + steps).filter(_ < prog.tokens.length).map(Position)
     }
 
     def jumpBy(steps: Int): F[Unit] = nextPosition(steps).flatMap(jumpTo)
 
     val runOp: Instruction => F[Unit] = {
-      case Instruction.Halt => State.modify(Program.nextPosition.set(None))
-      case Instruction.Load(from) =>
-        dereference(from).flatMap(push) *> jumpBy(2)
+      case Instruction.Halt       => State.modify(Program.nextPosition.set(None))
+      case Instruction.Load(from) => dereference(from).flatMap(push) *> jumpBy(2)
+      case Instruction.Save(to)   => pop.flatMap(setAtPosition(to, _)) *> jumpBy(2)
+
       case Instruction.Combine(from, to, combine) =>
         val reduce: (Token, Token) => Token = combine match {
           case Way.Add  => _ add _
@@ -189,7 +221,7 @@ object Interpreter {
         }
 
         for {
-          newValue <- from.nonEmptyTraverse(dereference).map(_.reduceLeft(reduce))
+          newValue <- from.traverse(dereference).map(_.reduceLeft(reduce))
           _        <- setAtPosition(to, newValue)
           _        <- jumpBy(4)
         } yield ()
@@ -197,7 +229,10 @@ object Interpreter {
 
     val getOutput: F[Int] = State.inspect(_.tokens.head.token)
 
-    val runProgram: F[Int] = nextOp.flatMap(runOp).whileM_(running) *> getOutput
+    val runProgram: F[Int] = (nextOp
+      .flatTap(op => Console[F].putStrLn("Next op is " + op)))
+      .flatMap(runOp)
+      .whileM_(running) *> getOutput
 
     def setParams(noun: Int, verb: Int): F[Unit] = {
       val before =
@@ -218,18 +253,23 @@ object Day5 extends IOApp {
 
   def run(args: List[String]): IO[ExitCode] =
     Util.readFile[IO]("files/day5.txt").flatMap { file =>
+//      val parsed = parse("3,0,4,0,99")
       val parsed = parse(file)
-      part1(parsed).flatMap(putStrLn(_)) *>
-        part2(parsed).flatMap(putStrLn(_))
+
+      part1(parsed).map(_.toString).flatMap(putStrLn)
     } as ExitCode.Success
 
   def parse(input: String): Program = {
-    val tokens = input.split(",").toList.map(Token.parse)
+    val tokens = input.split(",").map(_.trim).toList.map(Token.parse)
     Program(tokens, Position(0).some, Nil)
   }
 
-  def part1(input: Program): IO[Int] =
-    Interpreter.fromInputWithParams[IO](input, 12, 2).flatMap(_.runProgram)
+  def part1(input: Program): IO[Token] =
+    Interpreter
+      .fromInput[IO](input)
+      .flatTap(_.push(Token(1)))
+      .flatTap(_.runProgram)
+      .flatMap(_.getStackHead)
 
   def part2(input: Program): IO[Option[Int]] = {
     val range = fs2.Stream.range(0, 100)

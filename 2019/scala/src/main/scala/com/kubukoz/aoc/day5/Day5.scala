@@ -10,7 +10,7 @@ import cats.mtl.{ApplicativeAsk, MonadState}
 import cats.tagless.autoFunctorK
 import cats.~>
 import com.kubukoz.aoc.Util
-import com.kubukoz.aoc.day5.data.Instruction.{BinOp, UnOp}
+import com.kubukoz.aoc.day5.data.Instruction.{BinOp, UnaryOp}
 import com.kubukoz.aoc.day5.data.{Debug, Program, Token}
 import com.olegpy.meow.effects._
 import com.olegpy.meow.prelude._
@@ -41,42 +41,14 @@ private[day5] object data {
   object Instruction {
     case object Halt extends Instruction
 
-    final case class BinaryMatch(a: Reference, b: Reference, to: Position, combine: BinOp)
-        extends Instruction
-
     final case class Save(to: Position)    extends Instruction
     final case class Load(from: Reference) extends Instruction
 
-    final case class JumpIf(ref: Reference, location: Reference, check: UnOp[Boolean])
+    final case class JumpIf(ref: Reference, location: Reference, check: UnaryOp[Boolean])
         extends Instruction
 
-    sealed trait UnOp[A] extends Product with Serializable
-
-    object UnOp {
-      final case class Inverse(underlying: UnOp[Boolean]) extends UnOp[Boolean]
-      case object IsZero                                  extends UnOp[Boolean]
-
-      def toFunction[A]: UnOp[A] => Token => A = {
-        case Inverse(op) => toFunction(op).map(!_)
-        case IsZero      => _.token === 0
-      }
-    }
-    sealed trait BinOp extends Product with Serializable
-
-    object BinOp {
-
-      val toFunction: BinOp => (Token, Token) => Token = {
-        case BinOp.Add      => _ add _
-        case BinOp.Mult     => _ mult _
-        case BinOp.LessThan => (a, b) => if (a.token < b.token) Token(1) else Token(0)
-        case BinOp.EqualTo  => (a, b) => if (a.token == b.token) Token(1) else Token(0)
-      }
-
-      case object Add      extends BinOp
-      case object Mult     extends BinOp
-      case object LessThan extends BinOp
-      case object EqualTo  extends BinOp
-    }
+    final case class BinaryMatch(a: Reference, b: Reference, to: Position, combine: BinOp)
+        extends Instruction
 
     val decode: PartialFunction[List[Token], Instruction] = {
       case Token.Halt :: _ => Halt
@@ -92,10 +64,14 @@ private[day5] object data {
       case Token.header(Token.Load, modes) :: from :: _ => Load(from.withMode(modes(0)))
 
       case Token.header(Token.JumpIfTrue, modes) :: operand :: target :: _ =>
-        JumpIf(operand.withMode(modes(0)), target.withMode(modes(1)), UnOp.Inverse(UnOp.IsZero))
+        JumpIf(
+          operand.withMode(modes(0)),
+          target.withMode(modes(1)),
+          UnaryOp.Inverse(UnaryOp.IsZero)
+        )
 
       case Token.header(Token.JumpIfFalse, modes) :: operand :: target :: _ =>
-        JumpIf(operand.withMode(modes(0)), target.withMode(modes(1)), UnOp.IsZero)
+        JumpIf(operand.withMode(modes(0)), target.withMode(modes(1)), UnaryOp.IsZero)
 
       case Token.header(Token.LessThan, modes) :: a :: b :: store :: _ =>
         combine(modes, a, b, store, BinOp.LessThan)
@@ -117,7 +93,37 @@ private[day5] object data {
         toPosition(to),
         merge
       )
+
+    sealed trait UnaryOp[A] extends Product with Serializable
+
+    object UnaryOp {
+      final case class Inverse(underlying: UnaryOp[Boolean]) extends UnaryOp[Boolean]
+      case object IsZero                                     extends UnaryOp[Boolean]
+
+      def toFunction[A]: UnaryOp[A] => Token => A = {
+        case Inverse(op) => toFunction(op).map(!_)
+        case IsZero      => _.token === 0
+      }
+    }
+
+    sealed trait BinOp extends Product with Serializable
+
+    object BinOp {
+
+      val toFunction: BinOp => (Token, Token) => Token = {
+        case BinOp.Add      => _ add _
+        case BinOp.Mult     => _ mult _
+        case BinOp.LessThan => (a, b) => if (a.token < b.token) Token(1) else Token(0)
+        case BinOp.EqualTo  => (a, b) => if (a.token == b.token) Token(1) else Token(0)
+      }
+
+      case object Add      extends BinOp
+      case object Mult     extends BinOp
+      case object LessThan extends BinOp
+      case object EqualTo  extends BinOp
+    }
   }
+
   val toPosition: Token => Position = t => Position(t.token)
 
   sealed trait Reference extends Product with Serializable
@@ -266,7 +272,7 @@ object Interpreter {
 
       case Instruction.JumpIf(ref, to, check) =>
         dereference(ref)
-          .map(UnOp.toFunction(check))
+          .map(UnaryOp.toFunction(check))
           .ifM(
             ifTrue = dereference(to).map(toPosition(_).some).flatMap(jumpTo),
             ifFalse = jumpBy(3)

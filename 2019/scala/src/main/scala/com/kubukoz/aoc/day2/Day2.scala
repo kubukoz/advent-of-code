@@ -14,8 +14,6 @@ import com.kubukoz.aoc.Util
 import com.olegpy.meow.prelude._
 import com.olegpy.meow.effects._
 import cats.mtl.MonadState
-import com.kubukoz.aoc.day2.data.Token
-import com.kubukoz.aoc.day2.data.Position
 import com.kubukoz.aoc.day2.data.Program
 import cats.effect.concurrent.Ref
 

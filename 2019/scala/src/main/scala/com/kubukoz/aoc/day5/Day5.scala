@@ -47,6 +47,12 @@ private[day5] object data {
       sealed trait Way extends Product with Serializable
 
       object Way {
+
+        val toFunction: Way => (Token, Token) => Token = {
+          case Way.Add  => _ add _
+          case Way.Mult => _ mult _
+        }
+
         case object Add  extends Way
         case object Mult extends Way
       }
@@ -150,7 +156,6 @@ trait Interpreter[F[_]] {
   def getStackHead: F[Token]
   def push(token: Token): F[Unit]
   def runProgram: F[Int]
-  def setParams(noun: Int, verb: Int): F[Unit]
 }
 
 object Interpreter {
@@ -160,13 +165,6 @@ object Interpreter {
       implicit val MS = ref.stateInstance
       statefulInstance[F]
   }
-
-  def fromInputWithParams[F[_]: Sync: Console](
-    input: Program,
-    noun: Int,
-    verb: Int
-  ): F[Interpreter[F]] =
-    fromInput[F](input).flatTap(_.setParams(noun, verb))
 
   def statefulInstance[F[_]: Program.MState: Console]: Interpreter[F] = new Interpreter[F] {
     val State: Program.MState[F] = implicitly[Program.MState[F]]
@@ -210,40 +208,25 @@ object Interpreter {
     def jumpBy(steps: Int): F[Unit] = nextPosition(steps).flatMap(jumpTo)
 
     val runOp: Instruction => F[Unit] = {
-      case Instruction.Halt       => State.modify(Program.nextPosition.set(None))
-      case Instruction.Load(from) => dereference(from).flatMap(push) *> jumpBy(2)
-      case Instruction.Save(to)   => pop.flatMap(setAtPosition(to, _)) *> jumpBy(2)
+      case Instruction.Halt                       => jumpTo(none)
+      case Instruction.Load(from)                 => dereference(from).flatMap(push) *> jumpBy(2)
+      case Instruction.Save(to)                   => pop.flatMap(setAtPosition(to, _)) *> jumpBy(2)
+      case Instruction.Combine(from, to, combine) => combineImpl(from, to, combine) *> jumpBy(4)
+    }
 
-      case Instruction.Combine(from, to, combine) =>
-        val reduce: (Token, Token) => Token = combine match {
-          case Way.Add  => _ add _
-          case Way.Mult => _ mult _
-        }
-
-        for {
-          newValue <- from.traverse(dereference).map(_.reduceLeft(reduce))
-          _        <- setAtPosition(to, newValue)
-          _        <- jumpBy(4)
-        } yield ()
+    private def combineImpl(from: NonEmptyList[Reference], to: Position, combine: Way): F[Unit] = {
+      from
+        .traverse(dereference)
+        .map(_.reduceLeft(Way.toFunction(combine)))
+        .flatMap(setAtPosition(to, _))
     }
 
     val getOutput: F[Int] = State.inspect(_.tokens.head.token)
 
-    val runProgram: F[Int] = (nextOp
-      .flatTap(op => Console[F].putStrLn("Next op is " + op)))
+    val runProgram: F[Int] = nextOp
+    //      .flatTap(op => Console[F].putStrLn("Running operation " + op))
       .flatMap(runOp)
       .whileM_(running) *> getOutput
-
-    def setParams(noun: Int, verb: Int): F[Unit] = {
-      val before =
-        Program.tokens
-          .composeOptional(Index.index(1))
-          .set(Token(noun))
-          .compose(Program.tokens.composeOptional(Index.index(2)).set(Token(verb)))
-
-      State.modify(before)
-    }
-
   }
 }
 
@@ -253,7 +236,6 @@ object Day5 extends IOApp {
 
   def run(args: List[String]): IO[ExitCode] =
     Util.readFile[IO]("files/day5.txt").flatMap { file =>
-//      val parsed = parse("3,0,4,0,99")
       val parsed = parse(file)
 
       part1(parsed).map(_.toString).flatMap(putStrLn)
@@ -271,18 +253,11 @@ object Day5 extends IOApp {
       .flatTap(_.runProgram)
       .flatMap(_.getStackHead)
 
-  def part2(input: Program): IO[Option[Int]] = {
-    val range = fs2.Stream.range(0, 100)
-
-    (range, range).tupled.evalMap {
-      case (noun, verb) =>
-        Interpreter
-          .fromInputWithParams[IO](input, noun, verb)
-          .flatMap(_.runProgram)
-          .map((noun, verb, _))
-    }.collectFirst {
-      case (noun, verb, 19690720) => 100 * noun + verb
-    }.compile.last
-  }
+  def part2(input: Program): IO[Token] =
+    Interpreter
+      .fromInput[IO](input)
+      .flatTap(_.push(Token(5)))
+      .flatTap(_.runProgram)
+      .flatMap(_.getStackHead)
 
 }

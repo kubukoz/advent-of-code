@@ -11,7 +11,7 @@ val commonSettings = Seq(
   libraryDependencies ++= compilerPlugins
 )
 
-val withCats = project
+val cats = project
   .in(file("cats"))
   .settings(commonSettings)
   .settings(
@@ -30,9 +30,18 @@ val withCats = project
     )
   )
 
+val zio = project
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % "1.0.3",
+      "dev.zio" %% "zio-streams" % "1.0.3"
+    )
+  )
+
 val root =
   project
     .in(file("."))
     .settings(commonSettings)
     .settings(skip in publish := true)
-    .aggregate(withCats)
+    .aggregate(cats, zio)

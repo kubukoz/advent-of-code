@@ -35,7 +35,8 @@ val zio = project
   .settings(
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % "1.0.3",
-      "dev.zio" %% "zio-streams" % "1.0.3"
+      "dev.zio" %% "zio-streams" % "1.0.3",
+      "dev.zio" %% "zio-macros" % "1.0.3"
     )
   )
 

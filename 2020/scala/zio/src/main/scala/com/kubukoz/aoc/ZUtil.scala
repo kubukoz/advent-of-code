@@ -8,11 +8,11 @@ import zio.blocking.Blocking
 
 object ZUtil {
 
-  def readFile(name: String): ZIO[Blocking, Throwable, List[String]] =
+  def readFile(name: String): ZIO[Blocking, Throwable, String] =
     Stream
       .fromFile(Paths.get(name))
       .transduce(ZTransducer.utf8Decode)
       .runCollect
-      .map(_.toList)
+      .map(_.mkString)
 
 }

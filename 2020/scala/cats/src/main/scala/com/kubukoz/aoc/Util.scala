@@ -5,7 +5,6 @@ import java.nio.file.Paths
 import fs2.io.file.Files
 import cats.effect.kernel.Ref
 import cats.Monad
-import cats.mtl.Stateful
 import cats.syntax.all._
 import cats.effect.unsafe.IORuntime
 import cats.effect.IO
@@ -35,4 +34,17 @@ object Util {
       }
     }
 
+}
+
+//cats-mtl polyfill
+trait Stateful[F[_], S] {
+  def monad: Monad[F]
+
+  def inspect[A](f: S => A): F[A] = monad.map(get)(f)
+
+  def modify(f: S => S): F[Unit] = monad.flatMap(inspect(f))(set)
+
+  def get: F[S]
+
+  def set(s: S): F[Unit]
 }

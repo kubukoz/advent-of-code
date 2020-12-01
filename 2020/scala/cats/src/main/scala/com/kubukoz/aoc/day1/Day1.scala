@@ -11,15 +11,13 @@ object Day1 extends IOApp.Simple {
     Util
       .readFile[IO]("files/day1.txt")
       .map(_.map(_.trim).filter(_.nonEmpty).map(_.toInt))
-      .flatMap { nums =>
+      .map { nums =>
         List(2, 3)
-          .parTraverse { i =>
-            IO {
-              nums
-                .combinations(i)
-                .find(_.sum == 2020)
-                .map(_.product)
-            }
+          .map {
+            nums
+              .combinations(_)
+              .find(_.sum == 2020)
+              .map(_.product)
           }
       }
       .flatMap(_.traverse_(IO.println(_)))

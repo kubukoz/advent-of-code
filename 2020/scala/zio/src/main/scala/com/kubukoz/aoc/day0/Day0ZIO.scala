@@ -10,6 +10,6 @@ object Day0ZIO extends ZUtilApp {
   def runProg: ZIO[ZUtil with zio.ZEnv, Any, Any] =
     ZUtil
       .readFile("files/day0.txt")
-      .flatMap(putStrLn(_))
+      .flatMap(ZIO.foreach(_)(putStrLn(_)))
 
 }

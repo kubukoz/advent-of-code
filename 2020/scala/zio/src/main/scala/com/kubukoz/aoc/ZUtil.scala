@@ -12,17 +12,17 @@ import zio.macros.accessible
 object ZUtil {
 
   trait Service {
-    def readFile(name: String): IO[Throwable, String]
+    def readFile(name: String): IO[Throwable, List[String]]
   }
 
   val layer: ZLayer[Blocking, Nothing, ZUtil] = ZLayer.fromFunction[Blocking, Service] { blocking =>
     new Service {
-      def readFile(name: String): zio.IO[Throwable, String] =
+      def readFile(name: String): zio.IO[Throwable, List[String]] =
         Stream
           .fromFile(Paths.get(name))
           .transduce(ZTransducer.utf8Decode)
           .runCollect
-          .map(_.mkString)
+          .map(_.toList)
           .provide(blocking)
     }
   }

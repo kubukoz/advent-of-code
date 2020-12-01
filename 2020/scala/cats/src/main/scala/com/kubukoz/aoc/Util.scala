@@ -10,12 +10,13 @@ import cats.syntax.all._
 
 object Util {
 
-  def readFile[F[_]: Files: Concurrent](name: String): F[String] =
+  def readFile[F[_]: Files: Concurrent](name: String): F[List[String]] =
     Files[F]
       .readAll(Paths.get(name), 4096)
       .through(fs2.text.utf8Decode[F])
+      .through(fs2.text.lines[F])
       .compile
-      .string
+      .toList
 
   def state[F[_]: Ref.Make: Monad, A](start: A): F[Stateful[F, A]] =
     Ref[F].of(start).map { ref =>

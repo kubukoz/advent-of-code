@@ -21,8 +21,7 @@ object Day1 extends IOApp.Simple {
                 .map(_.product)
             }
           }
-          .flatMap(_.traverse(IO.println(_)))
       }
-      .void
+      .flatMap(_.traverse_(IO.println(_)))
 
 }

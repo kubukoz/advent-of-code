@@ -9,7 +9,7 @@ case class Password(from: Int, to: Int, letter: Char, value: String) {
     (from to to) contains value.count(_ == letter)
 
   def isValid2: Boolean = {
-    val indexed = value.zipWithIndex.map(_.map(_ + 1)).map(_.swap).toMap
+    val indexed = value.zipWithIndex.map(_.fmap(_ + 1)).map(_.swap).toMap
 
     List(from, to).count(indexed(_) == letter) == 1
   }

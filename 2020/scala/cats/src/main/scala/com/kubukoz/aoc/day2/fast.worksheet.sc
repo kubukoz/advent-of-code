@@ -1,11 +1,9 @@
-import cats.effect.IO
 import com.kubukoz.aoc._
-import cats.effect.unsafe.implicits._
 import cats.implicits._
 
 val pat = """(\d+)\-(\d+) (\w)\: (\w+)""".r
 
-final case class Password(from: Int, to: Int, letter: Char, value: String) {
+case class Password(from: Int, to: Int, letter: Char, value: String) {
 
   def isValid: Boolean =
     (from to to) contains value.count(_ == letter)
@@ -18,7 +16,7 @@ final case class Password(from: Int, to: Int, letter: Char, value: String) {
 
 }
 
-val passwords = Util.readFile[IO]("./files/day2.txt").unsafeRunSync().filterNot(_.trim.isEmpty()).map {
+val passwords = Util.readFileSkipLastEmptyLineUnsafe("./files/day2.txt").map {
   case pat(fromDay, toDay, letter, password) => Password(fromDay.toInt, toDay.toInt, letter.head, password)
 }
 

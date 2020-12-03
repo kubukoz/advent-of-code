@@ -20,14 +20,10 @@ object Util {
       .readAll(Paths.get(name), 4096)
       .through(fs2.text.utf8Decode[F])
       .through(fs2.text.lines[F])
-
-  //because this is most likely what I want to do anyway
-  def readFileSkipLastEmptyLineUnsafe(name: String): List[String] =
-    streamFile[IO](name)
       .dropLastIf(_.trim.isEmpty)
-      .compile
-      .toList
-      .unsafeRunSync()(IORuntime.global)
+
+  def readFileUnsafe(name: String): List[String] =
+    readFile[IO](name).unsafeRunSync()(IORuntime.global)
 
   def state[F[_]: Ref.Make: Monad, A](start: A): F[Stateful[F, A]] =
     Ref[F].of(start).map { ref =>

@@ -16,7 +16,7 @@ case class Password(from: Int, to: Int, letter: Char, value: String) {
 
 }
 
-val passwords = Util.readFileSkipLastEmptyLineUnsafe("./files/day2.txt").map {
+val passwords = Util.readFileUnsafe("./files/day2.txt").map {
   case pat(fromDay, toDay, letter, password) => Password(fromDay.toInt, toDay.toInt, letter.head, password)
 }
 

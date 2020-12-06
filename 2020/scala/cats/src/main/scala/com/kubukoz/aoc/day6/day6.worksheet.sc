@@ -5,7 +5,6 @@ val input = Util.readFileUnsafe(
   "./files/day6.txt"
 )
 
-//split on input? wtf
 val groups = input.mkString("\n").split("\n\n").map(_.split("\n").toList).toList
 
 val questions = 'a' to 'z'

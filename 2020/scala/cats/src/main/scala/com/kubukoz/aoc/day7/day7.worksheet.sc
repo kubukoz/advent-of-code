@@ -7,13 +7,10 @@ case class Tree[A](value: A, children: List[Tree[A]]) {
   def pathToMatch(matcher: Tree[A] => Boolean): List[NonEmptyList[Tree[A]]] =
     if (matcher(this)) List(NonEmptyList.one(this))
     else
-      children match {
-        case Nil          => Nil
-        case moreChildren =>
-          moreChildren
-            .flatMap(_.pathToMatch(matcher))
-            .map(this :: _)
-      }
+      children
+        .toNel
+        .toList
+        .flatMap(_.toList.flatMap(_.pathToMatch(matcher)).map(this :: _))
 
   def find(pred: A => Boolean): Option[Tree[A]] =
     if (pred(value)) this.some

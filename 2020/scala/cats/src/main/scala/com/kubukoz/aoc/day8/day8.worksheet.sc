@@ -1,3 +1,4 @@
+import monocle.macros.Lenses
 import scala.util.Random
 import cats.data.NonEmptyList
 import com.kubukoz.aoc._
@@ -21,27 +22,35 @@ def instruction(line: String) = line match {
     Instruction(Operation.values.find(_.toString.equalsIgnoreCase(op)).get, arg.toInt)
 }
 
+@Lenses
 case class Machine(acc: Int, pos: Int, history: Set[Int], instructions: List[Instruction])
 
-val nextInstruction: State[Machine, Option[Instruction]] = State.get[Machine].map {
-  case oldMachine if oldMachine.history.contains(oldMachine.pos) => None
-  case oldMachine                                                => oldMachine.instructions(oldMachine.pos).some
-}
+object Machine {
+  val get: State[Machine, Machine] = State.get
 
-def perform(instruction: Instruction): State[Machine, Unit] = {
-  val theArg = instruction.arg
+  def modify(f: Machine => Machine): State[Machine, Unit] = State.modify(f)
 
-  val next = State.modify[Machine](m => m.copy(pos = m.pos + 1))
-
-  val action: State[Machine, Unit] = instruction.op match {
-    case Operation.Acc => State.modify[Machine](m => m.copy(acc = m.acc + theArg)) *> next
-    case Operation.Jmp => State.modify[Machine](m => m.copy(pos = m.pos + theArg))
-    case Operation.Nop => next
+  def nextInstruction: State[Machine, Option[Instruction]] = Machine.get.map {
+    case oldMachine if oldMachine.history.contains(oldMachine.pos) => None
+    case oldMachine                                                => oldMachine.instructions(oldMachine.pos).some
   }
 
-  State.get[Machine].map(_.pos).flatMap { thePos =>
-    action *> State.modify(m => m.copy(history = m.history + thePos))
+  def addAccumulator(add: Int): State[Machine, Unit] = modify(Machine.acc.modify(_ + add))
+  def jump(steps: Int): State[Machine, Unit] = modify(Machine.pos.modify(_ + steps))
+  def log(position: Int): State[Machine, Unit] = modify(Machine.history.modify(_ + position))
+
+  def interpret(instruction: Instruction): State[Machine, Unit] = {
+    val theArg = instruction.arg
+
+    val action = instruction.op match {
+      case Operation.Acc => Machine.addAccumulator(theArg) *> Machine.jump(1)
+      case Operation.Jmp => Machine.jump(theArg)
+      case Operation.Nop => Machine.jump(1)
+    }
+
+    Machine.get.map(_.pos).flatMap(Machine.log) *> action
   }
+
 }
 
 val instructions = Util
@@ -49,14 +58,11 @@ val instructions = Util
   .map(instruction)
 
 def run =
-  OptionT(nextInstruction).semiflatMap(perform).foreverM.value.runS(Machine(0, 0, Set.empty, instructions)).value
+  OptionT(Machine.nextInstruction)
+    .semiflatMap(Machine.interpret)
+    .foreverM
+    .value
+    .runS(Machine(0, 0, Set.empty, instructions))
+    .value
 
-run.acc
-// OptionT(perform(instructions)).foreverM.value.runS(Machine(0, 0, Nil)).value
-
-// import cats.effect.IO
-// import cats.effect.unsafe.implicits._
-
-// val dupa = OptionT(IO(println("dupa")) *> IO(if (Random.nextBoolean()) Some(42) else None))
-
-// dupa.foreverM.value.unsafeRunSync()
+def part1 = run.acc

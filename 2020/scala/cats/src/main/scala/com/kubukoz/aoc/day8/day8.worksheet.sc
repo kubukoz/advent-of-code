@@ -1,11 +1,10 @@
-import scala.util.control.NonFatal
 import cats.Monad
 import monocle.macros.Lenses
-import scala.util.Random
 import cats.data.NonEmptyList
 import com.kubukoz.aoc._
 import cats.implicits._
 import cats.data._
+import cats.~>
 
 sealed trait Operation
 
@@ -16,10 +15,9 @@ object Operation {
 
   val values = NonEmptyList.of(Acc, Jmp, Nop)
 
-  val variate: Operation => Option[Operation] = {
-    case Nop => Jmp.some
-    case Jmp => Nop.some
-    case Acc => None
+  val variate: PartialFunction[Operation, Operation] = {
+    case Nop => Jmp
+    case Jmp => Nop
   }
 
 }
@@ -67,42 +65,49 @@ val instructions = Util
   .readFileUnsafe("./files/day8.txt")
   .map(instruction)
 
-def recurseVariate[A, S](
-  as: State[S, Option[A]]
+//Run a state monad in isolation - restore the state seen before it after we have a result.
+def isolateK[S]: State[S, *] ~> State[S, *] = new (State[S, *] ~> State[S, *]) {
+
+  def apply[A](fa: State[S, A]): State[S, A] = State { init =>
+    val result = fa.runA(init).value
+
+    (init, result)
+  }
+
+}
+
+def recurseVariate[F[_]: Monad, A, S](
+  getNext: F[Option[A]]
+)(
+  get: F[S]
+)(
+  perform: A => F[Unit]
+)(
+  isolate: F ~> F
 )(
   variate: A => Option[A]
-)(
-  perform: A => State[S, Unit]
-)(
-  init: S
-): List[S] = {
-  val (machineBeforeFork, nextInstruction) = as.run(init).value
+): F[List[S]] = {
+  val rec = recurseVariate(getNext)(get)(perform)(isolate) _
 
-  nextInstruction match {
-    /* all done, returning machine */
-    case None              => List(machineBeforeFork)
+  getNext.flatMap {
+    case None              => get.map(List(_))
     case Some(instruction) =>
-      val variation: Option[A] = variate(instruction)
+      val next = perform(instruction) *> rec(variate)
+      val variationNext = variate(instruction).map(perform(_) *> rec(_ => None))
 
-      val next = recurseVariate(as)(variate)(perform)(perform(instruction).runS(machineBeforeFork).value)
-
-      variation match {
-        case Some(theVariation) =>
-          next ++ recurseVariate(as)(_ => None)(perform)(perform(theVariation).runS(machineBeforeFork).value)
-        case None               => next
-      }
+      (next :: variationNext.toList).flatTraverse(isolate(_))
   }
 }
 
 def run(variate: Instruction => Option[Instruction]): List[Machine] =
-  recurseVariate(Machine.nextInstruction)(variate)(Machine.interpret)(
-    Machine(0, 0, Set.empty, instructions)
-  )
+  recurseVariate(Machine.nextInstruction)(State.get)(Machine.interpret)(isolateK)(variate)
+    .runA(Machine(0, 0, Set.empty, instructions))
+    .value
 
-val part1 = run(_ => None).map(_.acc)
+val part1 = run(_ => None).map(_.acc) //1654
 
-val part2 = run(Instruction.op.modifyF(Operation.variate))
+val part2 = run(Instruction.op.modifyF(Operation.variate.lift))
   .filter { machine =>
     machine.pos == machine.instructions.length
   }
-  .map(_.acc)
+  .map(_.acc) //833

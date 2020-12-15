@@ -23,6 +23,9 @@ object Day10 extends IOApp.Simple {
     val init = Joltage(0)
   }
 
+  //poor man's tagged types (transparent)
+  type ##[A, B] = A
+
   val input =
     List(
       Util.readFile[IO]("./files/day10.txt").nested.map(_.toInt).value,
@@ -46,7 +49,7 @@ object Day10 extends IOApp.Simple {
   def countPaths[T: Order](
     basePath: NonEmptyList[T]
   )(
-    canConnect: (T /* input */, T /* output */ ) => Boolean
+    canConnect: (T ## "input", T ## "output") => Boolean
   ): Long = {
     type S[A] = State[Map[T, Long], A]
 

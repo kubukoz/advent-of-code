@@ -9,8 +9,6 @@ import cats.kernel.Monoid
 import com.kubukoz.aoc.Util
 import io.estatico.newtype.macros.newtype
 import monocle.macros.Lenses
-import com.kubukoz.aoc.day14.Day14.Mask.Sign.SetZero
-import com.kubukoz.aoc.day14.Day14.Mask.Sign.SetOne
 
 object Day14 extends IOApp.Simple {
 
@@ -37,7 +35,7 @@ object Day14 extends IOApp.Simple {
     def asString: String =
       (0 until 36).map(i => overrides.get(i).map(if (_) '1' else '0').getOrElse('X')).mkString
 
-    def mask(value: Value): Value = {
+    def maskValue(value: Value): Value = {
       val bits: Vector[Boolean] = value.value.toBinaryString.map(_ == '1').toVector
       val padding = 36 - bits.size
 
@@ -47,18 +45,10 @@ object Day14 extends IOApp.Simple {
         bits.updated(index, sign)
       }
 
-      // debug(
-      //   "value" -> value,
-      //   "mask" -> asString,
-      //   "bits" -> bits,
-      //   "padding" -> padding,
-      //   "padded" -> padded,
-      //   "newBits" -> newBits,
-      //   "result" -> longFromBinary(newBits)
-      // )
-
       Value(longFromBinary(newBits))
     }
+
+    def maskAddress(address: Address): List[Address] = ???
 
     private def longFromBinary(bits: List[Boolean]): Long =
       fs2
@@ -73,20 +63,6 @@ object Day14 extends IOApp.Simple {
   }
 
   object Mask {
-
-    sealed trait Sign extends Product with Serializable {
-
-      val toBoolean: Boolean = this match {
-        case SetZero => false
-        case SetOne  => true
-      }
-
-    }
-
-    object Sign {
-      case object SetZero extends Sign
-      case object SetOne extends Sign
-    }
 
     val parse: String => Mask = {
       val mapping = Map('0' -> false, '1' -> true)
@@ -139,7 +115,7 @@ object Day14 extends IOApp.Simple {
     case Instruction.SetValue(address, value) =>
       Memory
         .getMask
-        .map(_.mask(value))
+        .map(_.maskValue(value))
         .flatMap(Memory.register(address, _))
   }
 

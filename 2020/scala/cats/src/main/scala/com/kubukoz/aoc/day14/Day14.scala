@@ -1,6 +1,5 @@
 package com.kubukoz.aoc.day14
 
-import cats.Show
 import cats.data.State
 import cats.effect.IO
 import cats.effect.IOApp

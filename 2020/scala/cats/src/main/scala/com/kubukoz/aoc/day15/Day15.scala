@@ -17,8 +17,6 @@ object Day15 extends IOApp.Simple {
   @newtype case class SeenNumber(value: Int)
 
   object SeenNumber {
-    implicit val order: Order[SeenNumber] = deriving
-
     def fromLastSeen(lastSeen: Option[SeenIndex], currentIndex: SeenIndex): SeenNumber =
       SeenNumber(lastSeen.foldMap(currentIndex.value - _.value))
   }

@@ -2,14 +2,13 @@ package com.kubukoz.aoc.day15
 
 import cats.Show
 import cats.data.NonEmptyList
-import cats.data.NonEmptySet
 import cats.data.State
 import cats.effect.IO
 import cats.effect.IOApp
 import cats.implicits._
-import cats.kernel.CommutativeSemigroup
 import cats.kernel.Order
 import cats.kernel.Semigroup
+import io.chrisdavenport.semigroups.Max
 import io.estatico.newtype.macros.newtype
 import monocle.macros.Lenses
 
@@ -19,23 +18,6 @@ object Day15 extends IOApp.Simple {
   object SeenNumber {
     def fromLastSeen(lastSeen: Option[SeenIndex], currentIndex: SeenIndex): SeenNumber =
       SeenNumber(lastSeen.foldMap(currentIndex.value - _.value))
-  }
-
-  //a set of up to 2 elements (effectively 1 or 2), leaving the largest one in the semigroup.
-  @newtype case class Max2Set[A] private (values: NonEmptySet[A])
-
-  object Max2Set {
-
-    def one[A: Order](a: A): Max2Set[A] = Max2Set(NonEmptySet.one(a))
-
-    implicit def semigroup[A: Order]: CommutativeSemigroup[Max2Set[A]] = (a, b) => {
-      Max2Set(
-        NonEmptySet.fromSetUnsafe(
-          (a.values ++ b.values).toList.sorted.takeRight(2).to(collection.immutable.SortedSet)
-        )
-      )
-    }
-
   }
 
   @newtype case class SeenIndex(value: Int) {
@@ -48,7 +30,7 @@ object Day15 extends IOApp.Simple {
 
   @Lenses
   case class Info(
-    appearances: Map[SeenNumber, Max2Set[SeenIndex]],
+    appearances: Map[SeenNumber, Max[SeenIndex]],
     currentIndex: Int,
     currentNumber: SeenNumber
   )
@@ -58,7 +40,7 @@ object Day15 extends IOApp.Simple {
     implicit val show: Show[Info] = Show.fromToString
 
     def fromPrefix(prefix: NonEmptyList[Int]): Info = Info(
-      appearances = prefix.map(SeenNumber(_)).zipWithIndex.toList.toMap.fmap(i => Max2Set.one(SeenIndex(i))),
+      appearances = prefix.map(SeenNumber(_)).zipWithIndex.toList.toMap.fmap(i => Max(SeenIndex(i))),
       currentIndex = prefix.toList.indices.last,
       currentNumber = SeenNumber(prefix.last)
     )
@@ -73,17 +55,17 @@ object Day15 extends IOApp.Simple {
 
     def appear(number: SeenNumber): S[Unit] =
       getIndex.flatMap { atIndex =>
-        modAppearances(_ |+| Map(number -> Max2Set.one(atIndex)))
+        modAppearances(_ |+| Map(number -> Max(atIndex)))
       }
 
-    def getAppearances(number: SeenNumber): S[Max2Set[SeenIndex]] =
-      State.inspect(_.appearances(number))
+    def getAppearances(number: SeenNumber): S[Option[SeenIndex]] =
+      State.inspect(_.appearances.get(number).map(_.getMax))
 
     val getNumber: S[SeenNumber] = State.inspect(Info.currentNumber.get)
     val getIndex: S[SeenIndex] = State.inspect(Info.currentIndex.get).map(SeenIndex(_))
 
     def modAppearances(
-      f: Map[SeenNumber, Max2Set[SeenIndex]] => Map[SeenNumber, Max2Set[SeenIndex]]
+      f: Map[SeenNumber, Max[SeenIndex]] => Map[SeenNumber, Max[SeenIndex]]
     ): S[Unit] = State.modify(Info.appearances.modify(f))
 
   }
@@ -91,13 +73,13 @@ object Day15 extends IOApp.Simple {
   def turn: S[Unit] =
     for {
       currentIndex   <- S.getIndex
-      allAppearances <- S.getNumber.flatMap(S.getAppearances)
+      prevNumber     <- S.getNumber
+      lastAppearance <- S.getAppearances(prevNumber)
 
-      lastAppearance = allAppearances.values.toSortedSet.excl(currentIndex).maxOption
       nextNumber = SeenNumber.fromLastSeen(lastAppearance, currentIndex)
 
+      _ <- S.appear(prevNumber)
       _ <- S.bumpIndex
-      _ <- S.appear(nextNumber)
       _ <- S.setNumber(nextNumber)
     } yield ()
 
@@ -117,7 +99,7 @@ object Day15 extends IOApp.Simple {
       Semigroup.combineN(turn, totalRounds - prefix.size).runS(input).value.currentNumber.value
 
     // (run(2020), run(30000000))
-    run(30000000 / 30)
+    run(30000000)
     // runAll(10)
   }
 

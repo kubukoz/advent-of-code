@@ -23,7 +23,8 @@ object Day15 extends IOApp.Simple {
       SeenNumber(lastSeen.foldMap(currentIndex.value - _.value))
   }
 
-  case class Max2Set[A](values: NonEmptySet[A])
+  //a set of up to 2 elements (effectively 1 or 2), leaving the largest one in the semigroup.
+  @newtype case class Max2Set[A] private (values: NonEmptySet[A])
 
   object Max2Set {
 
@@ -60,7 +61,7 @@ object Day15 extends IOApp.Simple {
 
     def fromPrefix(prefix: NonEmptyList[Int]): Info = Info(
       appearances = prefix.map(SeenNumber(_)).zipWithIndex.toList.toMap.fmap(i => Max2Set.one(SeenIndex(i))),
-      currentIndex = prefix.toList.indices.last /* todo might be off by one */,
+      currentIndex = prefix.toList.indices.last,
       currentNumber = SeenNumber(prefix.last)
     )
 
@@ -104,14 +105,22 @@ object Day15 extends IOApp.Simple {
 
   def run: IO[Unit] = IO.println {
     // val input = Info.fromPrefix("1,20,11,6,12,0".split(",").map(_.toInt).toList.toNel.get)
-    // val prefix = "0,3,6".split(",").map(_.toInt).toList.toNel.get
-    val prefix = "1,20,11,6,12,0".split(",").map(_.toInt).toList.toNel.get
+    val prefix = "0,3,6".split(",").map(_.toInt).toList.toNel.get
+    // val prefix = "1,20,11,6,12,0".split(",").map(_.toInt).toList.toNel.get
 
     val input = Info.fromPrefix(prefix)
 
     implicit def stateSemigroup[A]: Semigroup[State[A, Unit]] = _ >> _
 
-    Semigroup.combineN(turn, 30000000 - prefix.size).runS(input).value.currentNumber.value
+    def runAll(totalRounds: Int) =
+      prefix.toList ++ ((turn *> S.getNumber).replicateA(totalRounds - prefix.size)).runA(input).value.map(_.value)
+
+    def run(totalRounds: Int) =
+      Semigroup.combineN(turn, totalRounds - prefix.size).runS(input).value.currentNumber.value
+
+    // (run(2020), run(30000000))
+    run(30000000 / 30)
+    // runAll(10)
   }
 
 }

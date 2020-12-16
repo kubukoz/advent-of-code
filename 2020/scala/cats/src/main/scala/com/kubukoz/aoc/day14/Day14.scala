@@ -5,8 +5,8 @@ import cats.data.State
 import cats.effect.IO
 import cats.effect.IOApp
 import cats.implicits._
-import cats.kernel.Monoid
 import com.kubukoz.aoc.Util
+import fs2.Pipe
 import io.estatico.newtype.macros.newtype
 import monocle.macros.Lenses
 
@@ -21,45 +21,44 @@ object Day14 extends IOApp.Simple {
   sealed trait Instruction
 
   @newtype case class Address(value: Long)
-
   @newtype case class Value(value: Long)
-
-  object Value {
-    implicit val show: Show[Value] = deriving
-    implicit val monoid: Monoid[Value] = deriving
-  }
 
   @newtype case class Mask(overrides: Map[Int /* index */, Boolean]) {
 
-    //for debugging purposes
-    def asString: String =
-      (0 until 36).map(i => overrides.get(i).map(if (_) '1' else '0').getOrElse('X')).mkString
+    override def toString: String =
+      indices.map(i => overrides.get(i).map(if (_) '1' else '0').getOrElse('X')).mkString
+
+    def indices: Range = 0 until Mask.Bits
 
     def maskValue(value: Value): Value = {
-      val bits: Vector[Boolean] = value.value.toBinaryString.map(_ == '1').toVector
-      val padding = 36 - bits.size
-
-      val padded = List.fill(padding)(false) ++ bits
-
-      val newBits = overrides.foldLeft(padded) { case (bits, (index, sign)) =>
+      val newBits = overrides.foldLeft(Mask.longToBinary(value.value)) { case (bits, (index, sign)) =>
         bits.updated(index, sign)
       }
 
-      Value(longFromBinary(newBits))
+      Value(Mask.longFromBinary(newBits))
     }
 
-    def maskAddress(address: Address): List[Address] = ???
+    def maskAddress(address: Address): LazyList[Address] = {
 
-    private def longFromBinary(bits: List[Boolean]): Long =
-      fs2
-        .Stream
-        .emits(bits.reverse)
-        .map(if (_) 1L else 0L)
-        .zipWithIndex
-        .map { case (bit, indexFromRight) => bit << indexFromRight }
-        .compile
-        .foldMonoid
+      val swappedBits =
+        overrides.filter(_._2).keySet.foldLeft(Mask.longToBinary(address.value)) { case (bits, index) =>
+          bits.updated(index, true)
+        }
 
+      val floatingBits = (indices.toSet -- overrides.keySet).toList
+
+      val functions =
+        combinationsAll(floatingBits.flatMap(floatingBitToFunctions))
+          .view
+          .map(_.foldLeft(identity[Vector[Boolean]] _)(_ andThen _))
+
+      functions.map(_(swappedBits)).map(Mask.longFromBinary).map(Address(_)).to(LazyList)
+    }
+
+    private def floatingBitToFunctions(bitIndex: Int): List[cats.Endo[Vector[Boolean]]] =
+      List(true, false).map(newValue => _.updated(bitIndex, newValue))
+
+    private def combinationsAll[A](seq: Seq[A]): Seq[Seq[A]] = (1 to seq.size).flatMap(seq.combinations)
   }
 
   object Mask {
@@ -80,6 +79,26 @@ object Day14 extends IOApp.Simple {
 
     // it'll be overwritten anyway on the first line, so the contents can be arbitrary
     val init = Mask(Map.empty)
+
+    private val Bits = 36
+
+    private def longToBinary(long: Long): Vector[Boolean] = {
+      val bits: Vector[Boolean] = long.toBinaryString.map(_ == '1').toVector
+      val padding = Mask.Bits - bits.size
+
+      Vector.fill(padding)(false /* 0 */ ) ++ bits
+    }
+
+    private def longFromBinary(bits: Seq[Boolean]): Long =
+      fs2
+        .Stream
+        .emits(bits.reverse)
+        .map(if (_) 1L else 0L)
+        .zipWithIndex
+        .map { case (bit, indexFromRight) => bit << indexFromRight }
+        .compile
+        .foldMonoid
+
   }
 
   object Instruction {
@@ -119,14 +138,26 @@ object Day14 extends IOApp.Simple {
         .flatMap(Memory.register(address, _))
   }
 
+  val perform2: Instruction => State[Memory, Unit] = {
+    case Instruction.SetMask(mask)            => Memory.setMask(mask)
+    case Instruction.SetValue(address, value) =>
+      Memory
+        .getMask
+        .map(_.maskAddress(address))
+        .flatMap(_.traverse_(Memory.register(_, value)))
+  }
+
+  def showProgress[F[_], A]: Pipe[F, A, Unit] = _.scanMap(_ => 1).debug(e => s"Processed $e elements...").void
+
   def run: IO[Unit] =
     IO.ref(Memory.init)
       .flatTap { ref =>
         Util
           .streamFile[IO]("./files/day14.txt")
           .map(Instruction.parse)
-          .map(perform)
+          .map(perform2)
           .evalMap(ref.modifyState)
+          .through(showProgress)
           .compile
           .drain
       }

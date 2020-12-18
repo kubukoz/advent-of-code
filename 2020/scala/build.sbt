@@ -25,7 +25,8 @@ val cats = project
       "io.chrisdavenport" %% "monoids" % "0.2.0",
       "io.estatico" %% "newtype" % "0.4.3",
       "com.github.julien-truffaut" %% "monocle-macro" % "2.0.0",
-      "org.typelevel" %% "cats-parse" % "0.1.0",
+      "org.typelevel" %% "cats-parse" % "0.2.0",
+      "org.tpolecat" %% "atto-core" % "0.7.0",
       "org.scalatest" %% "scalatest" % "3.2.3" % Test
     )
   )

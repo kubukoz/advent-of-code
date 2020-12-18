@@ -60,17 +60,17 @@ def findEnd(tokens: List[Token], level: Int): Int = tokens.head match {
 }
 
 trait FoldOperands {
-  def perform(operators: List[(Expr, Operator)], firstOperand: Expr): Expr
+  def perform(firstOperand: Expr, operators: List[(Expr, Operator)]): Expr
 }
 
 object FoldOperands {
 
-  val equalPrecedence: FoldOperands = (operators, head) =>
+  val equalPrecedence: FoldOperands = (head, operators) =>
     operators.foldLeft(head) { case (l, (r, op)) =>
       op.express(l, r)
     }
 
-  val addFirst: FoldOperands = (operators, head) => {
+  val addFirst: FoldOperands = (head, operators) => {
     operators.headOption match {
       case None => head
 
@@ -78,7 +78,7 @@ object FoldOperands {
         val (adds, rest) = operators.span(_._2 == Operator.Add)
 
         // these are all additions so we can treat them equally
-        val addsReduced = equalPrecedence.perform(adds, head)
+        val addsReduced = equalPrecedence.perform(head, adds)
 
         // next operator (if any) has to be multiplication so we check what's after it
         rest match {
@@ -89,8 +89,8 @@ object FoldOperands {
               .express(
                 addsReduced,
                 addFirst.perform(
-                  restTail,
-                  operand
+                  operand,
+                  restTail
                 )
               )
         }
@@ -113,7 +113,7 @@ def decode(
       //adding the current operand to the end and skipping the head
       val shiftedHistory = allOperands.tail.zip(allOperators)
 
-      folder.perform(shiftedHistory, allOperands.head)
+      folder.perform(allOperands.head, shiftedHistory)
 
     case Some(next) =>
       next match {

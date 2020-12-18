@@ -1,3 +1,5 @@
+import cats.parse.Numbers
+import cats.kernel.Order
 import com.kubukoz.aoc.Util
 import cats.data.NonEmptyList
 import cats.Monad
@@ -25,6 +27,22 @@ sealed trait Expr extends Product with Serializable {
   def stringify: String = foldLeft[String]((a, b) => s"($a + $b)", (a, b) => s"($a * $b)", _.toString)
 }
 
+sealed trait Operator extends Product with Serializable {
+
+  def express(lhs: Expr, rhs: Expr): Expr = this match {
+    case Operator.Add      => Expr.Add(lhs, rhs)
+    case Operator.Multiply => Expr.Multiply(lhs, rhs)
+  }
+
+}
+
+object Operator {
+  case object Add extends Operator
+  case object Multiply extends Operator
+
+  implicit val order: Order[Operator] = Order.by(List(Add, Multiply).indexOf)
+}
+
 object Expr {
   case class Add(left: Expr, right: Expr) extends Expr
   case class Multiply(left: Expr, right: Expr) extends Expr
@@ -47,7 +65,58 @@ def findEnd(tokens: List[Token], level: Int): Int = tokens.head match {
   case _            => 1 + findEnd(tokens.tail, level)
 }
 
-def decode(tokens: List[Token], history: List[(Expr, ((Expr, Expr) => Expr))]): Expr = {
+trait FoldOperands {
+  def perform(operators: List[(Expr, Operator)], firstOperand: Expr): Expr
+}
+
+object FoldOperands {
+
+  val equalPrecedence: FoldOperands = (operators, head) =>
+    operators.foldLeft(head) { case (l, (r, op)) =>
+      op.express(l, r)
+    }
+
+  val addFirst: FoldOperands = (operators, head) => {
+
+    operators.headOption match {
+      case None => head
+
+      case Some(_) =>
+        val (adds, rest) = operators.span(_._2 == Operator.Add)
+
+        val addsReduced = adds.foldLeft(head) { case (l, (r, op)) => op.express(l, r) }
+
+        //next has to be multiplication so we check what's after it
+        rest match {
+          case Nil => addsReduced
+          case _   =>
+            val (addsAfterRestHead, others) = rest.tail.span(_._2 == Operator.Add)
+
+            val addsAfterRestHeadApplied = addsAfterRestHead.foldLeft(rest.head._1) { case (l, (r, op)) =>
+              op.express(l, r)
+            }
+
+            val reducedMult = rest
+              .head
+              ._2
+              .express(
+                addsReduced,
+                addsAfterRestHeadApplied
+              )
+
+            addFirst.perform(others, reducedMult)
+        }
+    }
+  }
+
+}
+
+def decode(
+  tokens: List[Token],
+  history: List[(Expr, Operator)]
+)(
+  implicit folder: FoldOperands
+): Expr = {
   def decodeOperatorSequence(previous: Expr, rest: List[Token]): Expr = rest.headOption match {
     case None =>
       val allOperators = history.map(_._2)
@@ -56,16 +125,14 @@ def decode(tokens: List[Token], history: List[(Expr, ((Expr, Expr) => Expr))]): 
       //adding the current operand to the end and skipping the head
       val shiftedHistory = allOperands.tail.zip(allOperators)
 
-      shiftedHistory.foldLeft(allOperands.head) { case (l, (r, op)) =>
-        op(l, r)
-      }
+      folder.perform(shiftedHistory, allOperands.head)
 
     case Some(next) =>
       next match {
         case Token.Plus  =>
-          decode(rest.tail, history :+ (previous -> Expr.Add))
+          decode(rest.tail, history :+ (previous -> Operator.Add))
         case Token.Times =>
-          decode(rest.tail, history :+ (previous -> Expr.Multiply))
+          decode(rest.tail, history :+ (previous -> Operator.Multiply))
         case _           => throw new Exception("Invalid decoding state")
       }
   }
@@ -86,27 +153,28 @@ def decode(tokens: List[Token], history: List[(Expr, ((Expr, Expr) => Expr))]): 
   }
 }
 
-def parser: Parser[Expr] = {
-  import cats.parse._
-
-  val tokens: Parser1[List[Token]] = P
-    .oneOf1(
-      List(
-        P.char('(').as(Token.LeftP),
-        P.char(')').as(Token.RightP),
-        Numbers.digits1.map(_.toInt).map(Token.Number),
-        P.char('+').as(Token.Plus),
-        P.char('*').as(Token.Times)
-      )
+def tokenize(input: String): List[Token] = P
+  .oneOf1(
+    List(
+      P.char('(').as(Token.LeftP),
+      P.char(')').as(Token.RightP),
+      Numbers.digits1.map(_.toInt).map(Token.Number),
+      P.char('+').as(Token.Plus),
+      P.char('*').as(Token.Times)
     )
-    .map(_.some)
-    .orElse1(P.char(' ').as(None))
-    .rep1
-    .map(_.toList.flatten)
+  )
+  .map(_.some)
+  .orElse1(P.char(' ').as(None))
+  .rep1
+  .map(_.toList.flatten)
+  .parseAll(input)
+  .leftMap(_ => ???)
+  .merge
 
-  tokens.map(decode(_, Nil))
+val input = Util.readFileUnsafe("./files/day18.txt")
+
+val tokens = input.map(tokenize)
+
+List(FoldOperands.equalPrecedence, FoldOperands.addFirst).map { implicit folder =>
+  tokens.foldMap(decode(_, Nil).evaluated)
 }
-
-Util.readFileUnsafe("./files/day18.txt").map(parser.parseAll(_).getOrElse(???)).foldMap(_.evaluated)
-
-// parser.parseAll("((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2").getOrElse(???).evaluated

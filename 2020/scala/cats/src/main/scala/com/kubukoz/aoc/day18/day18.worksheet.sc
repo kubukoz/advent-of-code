@@ -1,11 +1,5 @@
 import cats.parse.Numbers
 import cats.kernel.Order
-import com.kubukoz.aoc.Util
-import cats.data.NonEmptyList
-import cats.Monad
-import cats.parse.Parser1
-import cats.Defer
-import cats.parse.Parser
 import cats.parse.{Parser => P}
 import com.kubukoz.aoc.Util
 import cats.implicits._
@@ -77,34 +71,28 @@ object FoldOperands {
     }
 
   val addFirst: FoldOperands = (operators, head) => {
-
     operators.headOption match {
       case None => head
 
       case Some(_) =>
         val (adds, rest) = operators.span(_._2 == Operator.Add)
 
-        val addsReduced = adds.foldLeft(head) { case (l, (r, op)) => op.express(l, r) }
+        // these are all additions so we can treat them equally
+        val addsReduced = equalPrecedence.perform(adds, head)
 
-        //next has to be multiplication so we check what's after it
+        // next operator (if any) has to be multiplication so we check what's after it
         rest match {
-          case Nil => addsReduced
-          case _   =>
-            val (addsAfterRestHead, others) = rest.tail.span(_._2 == Operator.Add)
-
-            val addsAfterRestHeadApplied = addsAfterRestHead.foldLeft(rest.head._1) { case (l, (r, op)) =>
-              op.express(l, r)
-            }
-
-            val reducedMult = rest
-              .head
-              ._2
+          case Nil                               => addsReduced
+          case (operand, multiplier) :: restTail =>
+            // basically (add prefix) * (add suffix)
+            multiplier
               .express(
                 addsReduced,
-                addsAfterRestHeadApplied
+                addFirst.perform(
+                  restTail,
+                  operand
+                )
               )
-
-            addFirst.perform(others, reducedMult)
         }
     }
   }

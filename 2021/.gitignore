@@ -1,1 +1,4 @@
 .direnv
+.scala/
+app
+.unisonHistory

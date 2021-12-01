@@ -1,0 +1,6 @@
+use base.Nat
+
+> m = List.map (x -> x * 15) [1,2,3]
+> n = List.map (x -> x * x + 2) m
+> List.size n + 1
+

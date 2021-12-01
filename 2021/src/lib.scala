@@ -4,7 +4,7 @@ import java.nio.file.Paths
 import scala.io.Source
 import scala.util.Using
 
-object utils {
+object lib {
 
   def readAllLines(fileName: String): List[String] =
     Using(Source.fromFile(s"./resources/$fileName"))(_.getLines.toList).get

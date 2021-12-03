@@ -1,5 +1,6 @@
 import cats.implicits._
 
+import scala.util.chaining._
 import scala.annotation.tailrec
 
 object Day3 extends App {
@@ -9,32 +10,46 @@ object Day3 extends App {
   case object Max extends Mode
   case object Min extends Mode
 
-  def matchingBits(data: List[List[Char]], mode: Mode): String =
-    data
-      .transpose
-      .map(_.groupBy(identity).map(_.map(_.size)))
-      .map { withCount =>
-        mode match {
-          case Max => withCount.maxBy(_._2)
-          case Min => withCount.minBy(_._2)
-        }
+  type Data = List[List[Boolean]]
+
+  val charToBool: Char => Boolean = {
+    case '0' => false
+    case '1' => true
+  }
+
+  def mkBinString(bools: List[Boolean]) =
+    bools.map {
+      if (_)
+        1
+      else
+        0
+    }.mkString
+
+  def matchingBits(data: Data, mode: Mode): String = data
+    .transpose
+    .map(_.groupBy(identity).map(_.map(_.size)))
+    .map { withCount =>
+      mode match {
+        case Max => withCount.maxBy(_._2)
+        case Min => withCount.minBy(_._2)
       }
-      .map(_._1)
-      .mkString
+    }
+    .map(_._1)
+    .pipe(mkBinString)
 
   def parseBin(s: String) = Integer.parseInt(s, 2)
 
-  def part1(data: List[List[Char]]): Int = {
+  def part1(data: Data): Int = {
     val mostCommons = matchingBits(data, Max)
     val leastCommons = matchingBits(data, Min)
 
     parseBin(mostCommons) * parseBin(leastCommons)
   }
 
-  def part2(data: List[List[Char]]): Int = {
+  def part2(data: Data): Int = {
 
     @tailrec
-    def go(bitIndex: Int, data: List[List[Char]], mode: Mode): List[Char] = {
+    def go(bitIndex: Int, data: Data, mode: Mode): List[Boolean] = {
 
       val matchingCurrentBit = matchingBits(data, mode)
 
@@ -43,11 +58,12 @@ object Day3 extends App {
       val (matchingBit, nonMatchingBit) = data
         .partition(_.apply(bitIndex) == matchingCurrentBit(bitIndex))
 
-      val expectedBitAfterTieBreak: Char =
+      val expectedBitAfterTieBreak: Boolean =
         mode match {
-          case _ if matchingBit.size != nonMatchingBit.size => matchingCurrentBit(bitIndex)
-          case Max                                          => '1'
-          case Min                                          => '0'
+          case _ if matchingBit.size != nonMatchingBit.size =>
+            matchingCurrentBit(bitIndex).pipe(charToBool)
+          case Max => true
+          case Min => false
         }
 
       // taking the tie break into account
@@ -63,7 +79,7 @@ object Day3 extends App {
     val r1 = go(0, data, Max)
     val r2 = go(0, data, Min)
 
-    parseBin(r1.mkString) * parseBin(r2.mkString)
+    parseBin(r1.pipe(mkBinString)) * parseBin(r2.pipe(mkBinString))
   }
 
   val inputTest = """00100
@@ -81,7 +97,8 @@ object Day3 extends App {
 
   val inputReal = lib.readAllLines("day3.txt").map(_.toList)
 
-  val data = inputTest
+  val data: Data = inputTest
+    .map(_.map(charToBool))
 
   println("Part 1: " + part1(data))
   println("Part 2: " + part2(data))

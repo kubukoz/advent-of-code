@@ -15,18 +15,25 @@ object Day3 extends App {
 
   type Data = List[List[Boolean]]
 
-  val charToBool: Char => Boolean = {
-    case '0' => false
-    case '1' => true
+  object util {
+
+    val charToBool: Char => Boolean = {
+      case '0' => false
+      case '1' => true
+    }
+
+    def mkBinString(bools: List[Boolean]) =
+      bools.map {
+        if (_)
+          1
+        else
+          0
+      }.mkString
+
+    def parseBin(s: String) = Integer.parseInt(s, 2)
   }
 
-  def mkBinString(bools: List[Boolean]) =
-    bools.map {
-      if (_)
-        1
-      else
-        0
-    }.mkString
+  import util._
 
   def topBits(data: Data, mode: Mode): String = data
     .transpose
@@ -39,8 +46,6 @@ object Day3 extends App {
     }
     .map(_._1)
     .pipe(mkBinString)
-
-  def parseBin(s: String) = Integer.parseInt(s, 2)
 
   def part1(data: Data): Int = {
     val mostCommons = topBits(data, Max)
@@ -87,7 +92,7 @@ object Day3 extends App {
         case filtered      => Left((bitIndex + 1, filtered))
       }
     }
-
+    /*
     def oneRound(bitIndex: Int, mode: Mode): State[Data, Either[List[Boolean], Unit]] =
       keepMatchingWithTieBreak(mode)(_.apply(bitIndex)) *> State.get[Data].map {
         case result :: Nil => Left(result)
@@ -108,6 +113,7 @@ object Day3 extends App {
         .valueOr(_ => throw new Exception("Didn't exit early!"))
         .runA(data)
         .value
+     */
 
     val r1 = iterate(data, Max)
     val r2 = iterate(data, Min)

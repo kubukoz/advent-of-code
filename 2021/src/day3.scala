@@ -1,9 +1,10 @@
 import cats.implicits._
 
 import scala.util.chaining._
-import scala.annotation.tailrec
 import cats.Monad
 import cats.Id
+import cats.data.EitherT
+import cats.data.State
 
 object Day3 extends App {
 
@@ -49,12 +50,11 @@ object Day3 extends App {
   }
 
   def part2(data: Data): Int = {
-    def findMatchingWithTieBreak(
-      data: Data,
-      mode: Mode,
+    def keepMatchingWithTieBreak(
+      mode: Mode
     )(
       matchBy: Seq[Boolean] => Boolean
-    ): Data = {
+    ): State[Data, Unit] = State.modify { data =>
       // The top bits in the remaining data
       val currentTopBits = topBits(data, mode)
 
@@ -82,11 +82,32 @@ object Day3 extends App {
       data: Data,
       mode: Mode,
     ): List[Boolean] = (0, data).tailRecM[Id, List[Boolean]] { case (bitIndex, data) =>
-      findMatchingWithTieBreak(data, mode)(_.apply(bitIndex)) match {
+      keepMatchingWithTieBreak(mode)(_.apply(bitIndex)).runS(data).value match {
         case result :: Nil => Right(result)
         case filtered      => Left((bitIndex + 1, filtered))
       }
     }
+
+    def oneRound(bitIndex: Int, mode: Mode): State[Data, Either[List[Boolean], Unit]] =
+      keepMatchingWithTieBreak(mode)(_.apply(bitIndex)) *> State.get[Data].map {
+        case result :: Nil => Left(result)
+        case _             => Right(())
+      }
+
+    def iterate2(
+      data: Data,
+      mode: Mode,
+    ): List[Boolean] =
+      // Alternative implementation
+      data
+        .head
+        .indices
+        .toList
+        .traverse_(oneRound(_, mode).pipe(EitherT(_)))
+        .swap
+        .valueOr(_ => throw new Exception("Didn't exit early!"))
+        .runA(data)
+        .value
 
     val r1 = iterate(data, Max)
     val r2 = iterate(data, Min)

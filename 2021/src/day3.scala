@@ -1,116 +1,98 @@
+import cats.implicits._
+
 object Day3 extends App {
 
-//   val input = """00100
-// 11110
-// 10110
-// 10111
-// 10101
-// 01111
-// 00111
-// 11100
-// 10000
-// 11001
-// 00010
-// 01010""".split("\n").toList.map(_.toList)
+  sealed trait Mode
 
-  val input = lib.readAllLines("day3.txt").map(_.toList)
+  case object Max extends Mode
+  case object Min extends Mode
 
-  val data = input
-  val dataRoot = data
-
-  val mostCommons = // Integer.parseInt(
+  def matchingBits(data: List[List[Char]], mode: Mode): String =
     data
       .transpose
-      .map(
-        _.groupBy(identity).maxBy(_._2.size)._1
-      )
+      .map(_.groupBy(identity).map(_.map(_.size)))
+      .map { withCount =>
+        mode match {
+          case Max => withCount.maxBy(_._2)
+          case Min => withCount.minBy(_._2)
+        }
+      }
+      .map(_._1)
       .mkString
 
-  def mostCommonCount(i: Int) = data.map(_(i)).count(_ == mostCommons(i))
-  // val leastC = data.count(_(i) == mostCommons(i))
-  // 2 //
-  // )//
+  def parseBin(s: String) = Integer.parseInt(s, 2)
 
-  val leastCommons = // Integer.parseInt(
-    data
-      .transpose
-      .map(
-        _.groupBy(identity).minBy(_._2.size)._1
-      )
-      .mkString // ,
-  //   2,
-  // )
+  def part1(data: List[List[Char]]): Int = {
+    val mostCommons = matchingBits(data, Max)
+    val leastCommons = matchingBits(data, Min)
 
-  // println(result * result2)
-
-  def go(i: Int, data: List[List[Char]]): List[Char] = {
-
-    val mostCommons = // Integer.parseInt(
-      data
-        .transpose
-        .map(
-          _.groupBy(identity).maxBy(_._2.size)._1
-        )
-        .mkString
-
-    def mostCommonCount(i: Int) = data.map(_(i)).count(_ == mostCommons(i))
-
-    val considered: Char =
-      if (mostCommonCount(i).toDouble == data.size / 2.0)
-        '1'
-      else
-        mostCommons(i)
-
-    val filtered = data.filter { record =>
-      record(i) == considered
-    }
-
-    if (filtered.size == 1)
-      filtered.head
-    else if (filtered.isEmpty)
-      ???
-    else {
-      go(i + 1, filtered)
-    }
+    parseBin(mostCommons) * parseBin(leastCommons)
   }
 
-  def go2(i: Int, data: List[List[Char]]): List[Char] = {
+  def part2(data: List[List[Char]]): Int = {
 
-    val leastCommons = // Integer.parseInt(
-      data
-        .transpose
-        .map(
-          _.groupBy(identity).minBy(_._2.size)._1
-        )
-        .mkString
+    def go(bitIndex: Int, data: List[List[Char]], mode: Mode): List[Char] = {
 
-    def leastCommonCount(i: Int) = data.map(_(i)).count(_ == leastCommons(i))
+      val matchingBits =
+        data
+          .transpose
+          .map(
+            _.groupBy(identity).map(_.map(_.size))
+          )
+          .map { withCount =>
+            mode match {
+              case Max => withCount.maxBy(_._2)
+              case Min => withCount.minBy(_._2)
+            }
+          }
+          .map(_._1)
+          .mkString
 
-    val considered: Char =
-      if (leastCommonCount(i).toDouble == data.size / 2.0)
-        '0'
-      else
-        leastCommons(i)
+      val (matchingBit, nonMatchingBit) = data
+        .map(_(bitIndex))
+        .partition(_ == matchingBits(bitIndex))
 
-    val filtered = data.filter { record =>
-      record(i) == considered
+      val considered: Char =
+        mode match {
+          case _ if matchingBit.size != nonMatchingBit.size => matchingBits(bitIndex)
+          case Max                                          => '1'
+          case Min                                          => '0'
+        }
+
+      val filtered = data.filter { record =>
+        record(bitIndex) == considered
+      }
+
+      if (filtered.size == 1)
+        filtered.head
+      else {
+        go(bitIndex + 1, filtered, mode)
+      }
     }
 
-    if (filtered.size == 1)
-      filtered.head
-    else if (filtered.isEmpty)
-      ???
-    else {
-      go2(i + 1, filtered)
-    }
+    val r1 = go(0, data, Max)
+    val r2 = go(0, data, Min)
+
+    parseBin(r1.mkString) * parseBin(r2.mkString)
   }
 
-  val r1 = go(0, data)
-  val r2 = go2(0, data)
+  val inputTest = """00100
+11110
+10110
+10111
+10101
+01111
+00111
+11100
+10000
+11001
+00010
+01010""".split("\n").toList.map(_.toList)
 
-  // println(r1)
-  // println(r2)
-  // println(Integer.parseInt(r1.mkString, 2) * Integer.parseInt(r2.mkString, 2))
-  // println(r1.mkString)
-  println(Integer.parseInt(r1.mkString, 2) * Integer.parseInt(r2.mkString, 2))
+  val inputReal = lib.readAllLines("day3.txt").map(_.toList)
+
+  val data = inputReal
+
+  println("Part 1: " + part1(data))
+  println("Part 2: " + part2(data))
 }

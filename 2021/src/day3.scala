@@ -2,6 +2,8 @@ import cats.implicits._
 
 import scala.util.chaining._
 import scala.annotation.tailrec
+import cats.Monad
+import cats.Id
 
 object Day3 extends App {
 
@@ -47,16 +49,13 @@ object Day3 extends App {
   }
 
   def part2(data: Data): Int = {
-
-    @tailrec
-    def go(bitIndex: Int, data: Data, mode: Mode): List[Boolean] = {
-
+    def findMatching(bitIndex: Int, data: Data, mode: Mode): Data = {
       val matchingCurrentBit = matchingBits(data, mode)
 
       // matching/nonmatching based on the top current bit
       // if this is equal, we'll tie break later
       val (matchingBit, nonMatchingBit) = data
-        .partition(_.apply(bitIndex) == matchingCurrentBit(bitIndex))
+        .partition(_.apply(bitIndex) == matchingCurrentBit(bitIndex).pipe(charToBool))
 
       val expectedBitAfterTieBreak: Boolean =
         mode match {
@@ -67,17 +66,21 @@ object Day3 extends App {
         }
 
       // taking the tie break into account
-      val filtered = data.filter(_.apply(bitIndex) == expectedBitAfterTieBreak)
+      data.filter(_.apply(bitIndex) == expectedBitAfterTieBreak)
+    }
 
-      if (filtered.size == 1)
-        filtered.head
-      else {
-        go(bitIndex + 1, filtered, mode)
+    def iterate(
+      data: Data,
+      mode: Mode,
+    ): List[Boolean] = (0, data).tailRecM[Id, List[Boolean]] { case (bitIndex, data) =>
+      findMatching(bitIndex, data, mode) match {
+        case result :: Nil => Right(result)
+        case filtered      => Left((bitIndex + 1, filtered))
       }
     }
 
-    val r1 = go(0, data, Max)
-    val r2 = go(0, data, Min)
+    val r1 = iterate(data, Max)
+    val r2 = iterate(data, Min)
 
     parseBin(r1.pipe(mkBinString)) * parseBin(r2.pipe(mkBinString))
   }

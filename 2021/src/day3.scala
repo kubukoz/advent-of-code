@@ -27,7 +27,7 @@ object Day3 extends App {
         0
     }.mkString
 
-  def matchingBits(data: Data, mode: Mode): String = data
+  def topBits(data: Data, mode: Mode): String = data
     .transpose
     .map(_.groupBy(identity).map(_.map(_.size)))
     .map { withCount =>
@@ -42,38 +42,47 @@ object Day3 extends App {
   def parseBin(s: String) = Integer.parseInt(s, 2)
 
   def part1(data: Data): Int = {
-    val mostCommons = matchingBits(data, Max)
-    val leastCommons = matchingBits(data, Min)
+    val mostCommons = topBits(data, Max)
+    val leastCommons = topBits(data, Min)
 
     parseBin(mostCommons) * parseBin(leastCommons)
   }
 
   def part2(data: Data): Int = {
-    def findMatching(bitIndex: Int, data: Data, mode: Mode): Data = {
-      val matchingCurrentBit = matchingBits(data, mode)
+    def findMatchingWithTieBreak(
+      data: Data,
+      mode: Mode,
+    )(
+      matchBy: Seq[Boolean] => Boolean
+    ): Data = {
+      // The top bits in the remaining data
+      val currentTopBits = topBits(data, mode)
+
+      val expectedBitExact = currentTopBits.map(charToBool).pipe(matchBy)
+
+      // Says whether the entry has the given bit at the position defined by matchBy
+      def entryMatches(bit: Boolean): List[Boolean] => Boolean = _.pipe(matchBy) == bit
 
       // matching/nonmatching based on the top current bit
       // if this is equal, we'll tie break later
-      val (matchingBit, nonMatchingBit) = data
-        .partition(_.apply(bitIndex) == matchingCurrentBit(bitIndex).pipe(charToBool))
+      val (matchingBit, nonMatchingBit) = data.partition(entryMatches(expectedBitExact))
 
       val expectedBitAfterTieBreak: Boolean =
         mode match {
-          case _ if matchingBit.size != nonMatchingBit.size =>
-            matchingCurrentBit(bitIndex).pipe(charToBool)
-          case Max => true
-          case Min => false
+          case _ if matchingBit.size != nonMatchingBit.size => expectedBitExact
+          case Max                                          => true
+          case Min                                          => false
         }
 
       // taking the tie break into account
-      data.filter(_.apply(bitIndex) == expectedBitAfterTieBreak)
+      data.filter(entryMatches(expectedBitAfterTieBreak))
     }
 
     def iterate(
       data: Data,
       mode: Mode,
     ): List[Boolean] = (0, data).tailRecM[Id, List[Boolean]] { case (bitIndex, data) =>
-      findMatching(bitIndex, data, mode) match {
+      findMatchingWithTieBreak(data, mode)(_.apply(bitIndex)) match {
         case result :: Nil => Right(result)
         case filtered      => Left((bitIndex + 1, filtered))
       }

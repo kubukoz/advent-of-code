@@ -1,5 +1,7 @@
 import cats.implicits._
 
+import scala.annotation.tailrec
+
 object Day3 extends App {
 
   sealed trait Mode
@@ -31,37 +33,25 @@ object Day3 extends App {
 
   def part2(data: List[List[Char]]): Int = {
 
+    @tailrec
     def go(bitIndex: Int, data: List[List[Char]], mode: Mode): List[Char] = {
 
-      val matchingBits =
-        data
-          .transpose
-          .map(
-            _.groupBy(identity).map(_.map(_.size))
-          )
-          .map { withCount =>
-            mode match {
-              case Max => withCount.maxBy(_._2)
-              case Min => withCount.minBy(_._2)
-            }
-          }
-          .map(_._1)
-          .mkString
+      val matchingCurrentBit = matchingBits(data, mode)
 
+      // matching/nonmatching based on the top current bit
+      // if this is equal, we'll tie break later
       val (matchingBit, nonMatchingBit) = data
-        .map(_(bitIndex))
-        .partition(_ == matchingBits(bitIndex))
+        .partition(_.apply(bitIndex) == matchingCurrentBit(bitIndex))
 
-      val considered: Char =
+      val expectedBitAfterTieBreak: Char =
         mode match {
-          case _ if matchingBit.size != nonMatchingBit.size => matchingBits(bitIndex)
+          case _ if matchingBit.size != nonMatchingBit.size => matchingCurrentBit(bitIndex)
           case Max                                          => '1'
           case Min                                          => '0'
         }
 
-      val filtered = data.filter { record =>
-        record(bitIndex) == considered
-      }
+      // taking the tie break into account
+      val filtered = data.filter(_.apply(bitIndex) == expectedBitAfterTieBreak)
 
       if (filtered.size == 1)
         filtered.head
@@ -91,7 +81,7 @@ object Day3 extends App {
 
   val inputReal = lib.readAllLines("day3.txt").map(_.toList)
 
-  val data = inputReal
+  val data = inputTest
 
   println("Part 1: " + part1(data))
   println("Part 2: " + part2(data))

@@ -9,7 +9,7 @@ object lib {
 
   def readAll(fileName: String): String = readAllLines(fileName).mkString("\n")
 
-  def assertEquals[A](actual: A, expected: A, description: String = ""): Unit =
+  def assertEquals[A](actual: A, expected: A, description: String): Unit =
     if (actual != expected)
       Console
         .err
@@ -18,5 +18,9 @@ object lib {
             .filterNot(_.isEmpty())
             .mkString(" (", "", ")")
         )
+    else
+      println(
+        s"${Console.GREEN}Assertion passed ($description): $expected == $actual${Console.RESET}"
+      )
 
 }

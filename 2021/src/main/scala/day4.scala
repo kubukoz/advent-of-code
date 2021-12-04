@@ -12,39 +12,6 @@ import Ordering.Implicits._
 
 object Day4 extends App {
 
-  val example = """7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
-
-22 13 17 11  0
- 8  2 23  4 24
-21  9 14 16  7
- 6 10  3 18  5
- 1 12 20 15 19
-
- 3 15  0  2 22
- 9 18 13 17  5
-19  8  7 25 23
-20 11 10 24  4
-14 21 16 12  6
-
-14 21 17 24  4
-10 16 15  9 19
-18  8 23 26 20
-22 11 13  6  5
- 2  0 12  3  7"""
-
-  val fromFile = lib.readAllLines("day4.txt").mkString("\n")
-
-  final case class Board[E: Numeric](rows: List[List[E]], index: Int) {
-
-    def score(state: AppState[E]) =
-      rows.flatten.filterNot(state.pastCalls.contains).sum * state.pastCalls.head
-
-    def isComplete(state: AppState[E]) = List(rows, rows.transpose).exists(
-      _.exists(_.forall(entry => state.pastCalls.exists(_ equiv entry)))
-    )
-
-  }
-
   def parseInput(input: String): (List[Int], List[Board[Int]]) =
     (
       input.linesIterator.toList.head.split(",").map(_.toInt).toList,
@@ -65,6 +32,17 @@ object Day4 extends App {
         .zipWithIndex
         .map((Board.apply[Int] _).tupled),
     )
+
+  final case class Board[E: Numeric](rows: List[List[E]], index: Int) {
+
+    def score(state: AppState[E]) =
+      rows.flatten.filterNot(state.pastCalls.contains).sum * state.pastCalls.head
+
+    def isComplete(state: AppState[E]) = List(rows, rows.transpose).exists(
+      _.exists(_.forall(entry => state.pastCalls.exists(_ equiv entry)))
+    )
+
+  }
 
   final case class AppState[E](pastCalls: List[E])
 
@@ -91,19 +69,15 @@ object Day4 extends App {
         val result: F[Unit] =
           condition match {
             case FirstCompleted =>
-              val completeBoardNow = boards.find(_.isComplete(newState))
-
-              completeBoardNow.traverse_(E.raise)
+              boards
+                .find(_.isComplete(newState))
+                .traverse_(E.raise)
 
             case LastCompleted =>
-              val incompleteBoards = boards.filterNot(_.isComplete(newState))
-
-              // Defer for laziness of the .get call
-
               boards
                 .find(!_.isComplete(state))
                 .traverse_(E.raise)
-                .whenA(incompleteBoards.isEmpty)
+                .whenA(boards.forall(_.isComplete(newState)))
           }
 
         S.set(newState) *> result
@@ -123,15 +97,16 @@ object Day4 extends App {
   }
 
   locally {
-    val (calls, boards) = parseInput(example)
+    val (calls, boards) = parseInput(lib.readAll("day4-example.txt"))
 
     assertEquals(part(calls, boards, FirstCompleted), 4512, "Part 1 example")
     assertEquals(part(calls, boards, LastCompleted), 1924, "Part 2 example")
   }
 
   locally {
-    val (calls, boards) = parseInput(fromFile)
-    println("Part 1: " + part(calls, boards, FirstCompleted))
-    println("Part 2: " + part(calls, boards, LastCompleted))
+    val (calls, boards) = parseInput(lib.readAll("day4.txt"))
+
+    assertEquals(part(calls, boards, FirstCompleted), 82440, "Part 1")
+    assertEquals(part(calls, boards, LastCompleted), 20774, "Part 2")
   }
 }

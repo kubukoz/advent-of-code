@@ -9,4 +9,14 @@ object lib {
 
   def readAll(fileName: String): String = readAllLines(fileName).mkString("\n")
 
+  def assertEquals[A](actual: A, expected: A, description: String = ""): Unit =
+    if (actual != expected)
+      Console
+        .err
+        .println(
+          s"Assertion failed: expected $expected, got $actual" + Some(description)
+            .filterNot(_.isEmpty())
+            .mkString(" (", "", ")")
+        )
+
 }

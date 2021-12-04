@@ -3,14 +3,14 @@
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.unison.url = "github:ceedubs/unison-nix";
 
-  outputs = { nixpkgs, flake-utils, unison, ... }: flake-utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" "aarch64-darwin" ] (
+  outputs = { nixpkgs, flake-utils, unison, ... }: flake-utils.lib.eachDefaultSystem (
     system:
     let
       x86_pkgs = import nixpkgs { localSystem = "x86_64-darwin"; overlays = [ unison.overlay ]; };
 
       aarch64-overrides = final: prev:
         if prev.stdenv.isAarch64 then {
-          inherit (x86_pkgs) unison-ucm scala-cli;
+          inherit (x86_pkgs) unison-ucm;
         } else { };
 
 
@@ -18,7 +18,7 @@
 
     in
     {
-      devShell = pkgs.mkShell { buildInputs = [ pkgs.unison-ucm pkgs.scala-cli ]; };
+      devShell = pkgs.mkShell { buildInputs = [ pkgs.unison-ucm (pkgs.sbt.override { jre = pkgs.openjdk11; }) ]; };
     }
   );
 }

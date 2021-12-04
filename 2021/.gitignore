@@ -1,4 +1,3 @@
 .direnv
-.scala/
-app
 .unisonHistory
+**/target

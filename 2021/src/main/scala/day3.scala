@@ -1,10 +1,9 @@
+import cats.Id
+
+import cats.data.State
 import cats.implicits._
 
 import scala.util.chaining._
-import cats.Monad
-import cats.Id
-import cats.data.EitherT
-import cats.data.State
 
 object Day3 extends App {
 

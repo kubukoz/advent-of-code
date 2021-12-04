@@ -1,4 +1,11 @@
+import cats.data._
+
+import cats.implicits._
+
 import scala.util.Try
+
+import Numeric.Implicits._
+import Ordering.Implicits._
 
 object Day4 extends App {
 
@@ -29,17 +36,14 @@ object Day4 extends App {
 
   val calls = input.linesIterator.toList.head.split(",").map(_.toInt).toList
 
-  final case class Board(rows: List[List[Int]], index: Int) {
-    def score(state: AppState) =
+  final case class Board[E: Numeric](rows: List[List[E]], index: Int) {
+
+    def score(state: AppState[E]) =
       rows.flatten.filterNot(state.pastCalls.contains).sum * state.pastCalls.head
 
-    def isComplete(state: AppState) = {
-
-      val hasRow = rows.exists(_.forall(state.pastCalls.contains))
-      val hasColumn = rows.transpose.exists(_.forall(state.pastCalls.contains))
-
-      hasRow || hasColumn
-    }
+    def isComplete(state: AppState[E]) = List(rows, rows.transpose).exists(
+      _.exists(_.forall(entry => state.pastCalls.exists(_ equiv entry /* todo use numeric */ )))
+    )
 
   }
 
@@ -58,16 +62,14 @@ object Day4 extends App {
     }
     .toList
     .zipWithIndex
-    .map(Board.tupled)
+    .map((Board.apply[Int] _).tupled)
 
-  final case class AppState(pastCalls: List[Int])
-  import cats.implicits._
-  import cats.data._
+  final case class AppState[E](pastCalls: List[E])
 
-  def part =
+  def part[E: Numeric](calls: List[E], boards: List[Board[E]]) =
     calls
       .traverse { call =>
-        State.get[AppState].flatMap { state =>
+        State.get[AppState[E]].flatMap { state =>
           val newState = state.copy(pastCalls = call :: state.pastCalls)
 
           // val completeBoardNow = boards.find(_.isComplete(newState))
@@ -92,6 +94,6 @@ object Day4 extends App {
       .runS(AppState(Nil))
       .value
 
-  Try(part)
+  Try(part(calls, boards))
   // boards.foreach(println)
 }

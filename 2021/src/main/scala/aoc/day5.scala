@@ -4,66 +4,40 @@ import cats.implicits._
 
 import lib._
 
-import scala.util.chaining._
-
 object Day5 extends App {
   case class Point(x: Int, y: Int)
 
   case class Line(from: Point, to: Point) {
 
-    def allPoints = {
+    def allPoints: List[Point] =
       if (sameX) {
         {
           if (from.y > to.y)
             (to.y to from.y)
           else
             (from.y to to.y)
-        }.map(y => from.copy(y = y))
+        }.map(y => from.copy(y = y)).toList
       } else if (sameY) {
         if (from.x > to.x)
           (to.x to from.x)
         else
           (from.x to to.x)
-      }.map(x => from.copy(x = x))
+      }.map(x => from.copy(x = x)).toList
       else {
-        // here, the line is diagonal
-        // inc both x and y until both points are equal
-        // start with smaller x and y
+        val List(start, end) = List(from, to).sortBy(_.x)
 
-        // from.x, from.y -> to.x, to.y
-        // 9,7 -> 7,9 covers points 7,9, 9,7, 8,8, and 9,7
+        val xs = start.x to end.x
 
-        // from.x goes up
-        // from.y goes down
+        val ySign =
+          if (start.y < end.y)
+            1
+          else
+            -1
 
-        val minX = from.x min to.x
-        val maxX = from.x max to.x
+        val ys = start.y to end.y by ySign
 
-        val minY = from.y min to.y
-        val maxY = from.y max to.y
-        val diffX = (from.x - to.x).abs
-
-        (minX to maxX).zipWithIndex.map { case (x, i) =>
-          val goingFromFrom = minX == from.x
-
-          val y =
-            if (goingFromFrom) {
-              if (minY == from.y)
-                minY + i
-              else
-                maxY - i
-            } else {
-              // going from "to"
-              if (minY == to.y)
-                minY + i
-              else
-                maxY - i
-            }
-
-          Point(x, y)
-        }
+        (xs.toList, ys.toList).parMapN(Point.apply)
       }
-    }.toList
 
     def sameX = from.x == to.x
     def sameY = from.y == to.y

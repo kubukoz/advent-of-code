@@ -2,6 +2,7 @@ import cats.Id
 
 import cats.data.State
 import cats.implicits._
+import cats.kernel.Order
 
 import scala.util.chaining._
 
@@ -34,9 +35,9 @@ object Day3 extends App {
 
   import util._
 
-  def topBits(data: Data, mode: Mode): List[Boolean] = data
+  def topBits[A: Order](data: List[List[A]], mode: Mode): List[A] = data
     .transpose
-    .map(_.groupBy(identity).map(_.map(_.size)))
+    .map(_.groupByNel(identity).map(_.map(_.size)))
     .map { withCount =>
       mode match {
         case Max => withCount.maxBy(_._2)

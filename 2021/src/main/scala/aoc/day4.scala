@@ -1,3 +1,5 @@
+package aoc
+
 import cats.Monad
 
 import cats.data._

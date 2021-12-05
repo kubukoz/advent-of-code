@@ -1,3 +1,5 @@
+package aoc
+
 import cats.data.State
 
 import cats.implicits._

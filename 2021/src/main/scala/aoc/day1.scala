@@ -1,3 +1,5 @@
+package aoc
+
 object Day1 extends App {
 
   val input = lib.readAllLines("day1.txt")

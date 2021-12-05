@@ -1,3 +1,5 @@
+package aoc
+
 import cats.Id
 
 import cats.data.State

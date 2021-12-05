@@ -13,7 +13,8 @@ object Day3 extends App {
   case object Max extends Mode
   case object Min extends Mode
 
-  type Data = List[List[Boolean]]
+  type Data0[A] = List[List[A]]
+  type Data = Data0[Boolean]
 
   object util {
 
@@ -54,28 +55,30 @@ object Day3 extends App {
   }
 
   def part2(data: Data): Int = {
-    def keepMatchingWithTieBreak(
-      mode: Mode
+    def keepMatchingWithTieBreak[A: Order](
+      mode: Mode,
+      zero: A,
+      one: A,
     )(
-      matchBy: Seq[Boolean] => Boolean
-    ): State[Data, Unit] = State.modify { data =>
+      matchBy: Seq[A] => A
+    ): State[Data0[A], Unit] = State.modify { data =>
       // The top bits in the remaining data
-      val currentTopBits = topBits(data, mode)
+      val currentTopBits = topBits[A](data, mode)
 
       val expectedBitExact = currentTopBits.pipe(matchBy)
 
       // Says whether the entry has the given bit at the position defined by matchBy
-      def entryMatches(bit: Boolean): List[Boolean] => Boolean = _.pipe(matchBy) == bit
+      def entryMatches(bit: A): List[A] => Boolean = _.pipe(matchBy) == bit
 
       // matching/nonmatching based on the top current bit
       // if this is equal, we'll tie break later
       val (matchingBit, nonMatchingBit) = data.partition(entryMatches(expectedBitExact))
 
-      val expectedBitAfterTieBreak: Boolean =
+      val expectedBitAfterTieBreak: A =
         mode match {
           case _ if matchingBit.size != nonMatchingBit.size => expectedBitExact
-          case Max                                          => true
-          case Min                                          => false
+          case Max                                          => one
+          case Min                                          => zero
         }
 
       // taking the tie break into account
@@ -86,7 +89,9 @@ object Day3 extends App {
       data: Data,
       mode: Mode,
     ): List[Boolean] = (0, data).tailRecM[Id, List[Boolean]] { case (bitIndex, data) =>
-      keepMatchingWithTieBreak(mode)(_.apply(bitIndex)).runS(data).value match {
+      keepMatchingWithTieBreak(mode, zero = false, one = true)(_.apply(bitIndex))
+        .runS(data)
+        .value match {
         case result :: Nil => Right(result)
         case filtered      => Left((bitIndex + 1, filtered))
       }

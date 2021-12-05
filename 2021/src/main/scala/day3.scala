@@ -29,12 +29,12 @@ object Day3 extends App {
           0
       }.mkString
 
-    def parseBin(s: String) = Integer.parseInt(s, 2)
+    def parseBin(s: List[Boolean]) = Integer.parseInt(s.pipe(mkBinString), 2)
   }
 
   import util._
 
-  def topBits(data: Data, mode: Mode): String = data
+  def topBits(data: Data, mode: Mode): List[Boolean] = data
     .transpose
     .map(_.groupBy(identity).map(_.map(_.size)))
     .map { withCount =>
@@ -44,7 +44,6 @@ object Day3 extends App {
       }
     }
     .map(_._1)
-    .pipe(mkBinString)
 
   def part1(data: Data): Int = {
     val mostCommons = topBits(data, Max)
@@ -62,7 +61,7 @@ object Day3 extends App {
       // The top bits in the remaining data
       val currentTopBits = topBits(data, mode)
 
-      val expectedBitExact = currentTopBits.map(charToBool).pipe(matchBy)
+      val expectedBitExact = currentTopBits.pipe(matchBy)
 
       // Says whether the entry has the given bit at the position defined by matchBy
       def entryMatches(bit: Boolean): List[Boolean] => Boolean = _.pipe(matchBy) == bit
@@ -117,7 +116,7 @@ object Day3 extends App {
     val r1 = iterate(data, Max)
     val r2 = iterate(data, Min)
 
-    parseBin(r1.pipe(mkBinString)) * parseBin(r2.pipe(mkBinString))
+    parseBin(r1) * parseBin(r2)
   }
 
   val inputTest = """00100

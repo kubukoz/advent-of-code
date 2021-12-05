@@ -7,26 +7,21 @@ import lib._
 object Day5 extends App {
   case class Point(x: Int, y: Int)
 
+  // not the best name but whatever
+  def rangeSymmetric(x: Int, y: Int): Range = {
+    val List(min, max) = List(x, y).sorted
+    min to max
+  }
+
   case class Line(from: Point, to: Point) {
 
     def allPoints: List[Point] =
       if (sameX) {
-        {
-          if (from.y > to.y)
-            (to.y to from.y)
-          else
-            (from.y to to.y)
-        }.map(y => from.copy(y = y)).toList
+        rangeSymmetric(from.y, to.y).map(y => from.copy(y = y)).toList
       } else if (sameY) {
-        if (from.x > to.x)
-          (to.x to from.x)
-        else
-          (from.x to to.x)
-      }.map(x => from.copy(x = x)).toList
-      else {
+        rangeSymmetric(from.x, to.x).map(x => from.copy(x = x)).toList
+      } else {
         val List(start, end) = List(from, to).sortBy(_.x)
-
-        val xs = start.x to end.x
 
         val ySign =
           if (start.y < end.y)
@@ -34,9 +29,10 @@ object Day5 extends App {
           else
             -1
 
-        val ys = start.y to end.y by ySign
-
-        (xs.toList, ys.toList).parMapN(Point.apply)
+        (
+          (start.x to end.x).toList,
+          (start.y to end.y by ySign).toList,
+        ).parMapN(Point.apply)
       }
 
     def sameX = from.x == to.x

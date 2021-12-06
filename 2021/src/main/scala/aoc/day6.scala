@@ -1,14 +1,21 @@
 package aoc
 
 import aoc.lib._
+import cats.Monad
+import cats.data.OptionT
 import cats.data.State
 import cats.implicits._
 import cats.mtl.Stateful
-import cats.Monad
+
+import util.chaining._
 
 object Day6 extends App {
 
-  type CacheMap = Map[(Int, Int), Long]
+  final case class CacheMap(cache: Map[(Int, Int), Long], hits: Long, misses: Long) {
+    def +(kv: (((Int, Int), Long))): CacheMap = copy(cache = cache + kv)
+
+    def get(k: (Int, Int)): Option[Long] = cache.get(k)
+  }
 
   def go[F[_]: Monad](
     fish: Int,
@@ -18,9 +25,17 @@ object Day6 extends App {
   ): F[Long] = {
     def store(result: Long) = S.modify(_ + ((fish, rounds) -> result))
 
+    def updateStats(result: Option[_]): F[Unit] =
+      result
+        .fold(
+          S.modify(s => s.copy(misses = s.misses + 1))
+        )(_ => S.modify(s => s.copy(hits = s.hits + 1)))
+
     S.get.flatMap {
       _.get((fish, rounds))
-        .toOptionT[F]
+        .pure[F]
+        .flatTap(updateStats(_))
+        .pipe(OptionT(_))
         .getOrElseF {
           if (rounds == 0)
             1L.pure[F] /* no more rounds, count this one fish */
@@ -40,12 +55,19 @@ object Day6 extends App {
   def solve(input: List[String]): (Long, Long) = {
     val parsed = input.mkString.split(",").map(_.toInt).toList
 
-    def goAll(rounds: Int): Long =
-      parsed
-        .foldMapM(go[State[CacheMap, *]](_, rounds))
-        .runA(Map.empty)
-        .value
+    def goAll(rounds: Int): Long = {
+      val (s, result) =
+        parsed
+          .foldMapM(go[State[CacheMap, *]](_, rounds))
+          .run(CacheMap(Map.empty, 0, 0))
+          .value
 
+      println(
+        s"Cache hits: ${s.hits}, misses: ${s.misses}, hits/total rate: ${(s.hits * 100) / (s.hits + s.misses)}%"
+      )
+
+      result
+    }
     (80, 256).bimap(goAll, goAll)
   }
 

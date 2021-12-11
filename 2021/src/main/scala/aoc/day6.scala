@@ -2,6 +2,7 @@ package aoc
 
 import aoc.lib._
 import cats.implicits._
+import scala.annotation.tailrec
 
 object Day6 extends App {
 
@@ -21,6 +22,32 @@ object Day6 extends App {
           recurse(newGeneration, rounds - 1)
         }
 
+      recurse(parsed.groupBy(identity).map(_.map(_.size.toLong)), rounds)
+    }
+
+    (80, 256).bimap(goAll, goAll)
+  }
+
+  def solveAlt(input: List[String]): (Long, Long) = {
+    val parsed = input.mkString.split(",").map(_.toInt).toList
+
+    def goAll(rounds: Int): Long = {
+
+      @tailrec
+      def recurse(generation: Map[Int, Long], rounds: Int): Long =
+        if (rounds == 0)
+          generation.values.sum
+        else {
+          // foldMap - combines using the Map monoid
+          val newGeneration = generation.toList.foldMap {
+            case (0, amount)    => Map(6 -> amount, 8 -> amount)
+            case (fish, amount) => Map(fish - 1 -> amount)
+          }
+
+          recurse(newGeneration, rounds - 1)
+        }
+
+      // Credit to @kumalg for the idea of grouping
       recurse(parsed.groupBy(identity).map(_.map(_.size.toLong)), rounds)
     }
 

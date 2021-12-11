@@ -48,6 +48,7 @@ object Day6 extends App {
         }
 
       // Credit to @kumalg for the idea of grouping
+      // https://github.com/kumalg/advent-of-code-2021/blob/main/typescript/src/days/day06.ts
       recurse(parsed.groupBy(identity).map(_.map(_.size.toLong)), rounds)
     }
 

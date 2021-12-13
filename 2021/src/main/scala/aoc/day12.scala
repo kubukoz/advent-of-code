@@ -13,7 +13,7 @@ object Day12 extends App {
   val isEnd: String => Boolean = _ == "end"
   val isSmall: String => Boolean = _.matches("[a-z]+")
 
-  def countPaths(edges: Set[Edge], allowSmallDuplicate: Boolean, allowStartEnd: Boolean): Int = {
+  def countPaths(edges: Set[Edge], allowSmallDuplicate: Boolean): Int = {
 
     val getEdgesFrom: String => Set[String] = {
       val edgesByFrom = edges.groupBy(_.from).map(_.map(_.map(_.to)))
@@ -31,19 +31,13 @@ object Day12 extends App {
         identity
     }
 
-    val skipStart: Set[String] => Set[String] =
-      if (allowStartEnd)
-        identity
-      else
-        _ - "start"
-
     def go(history: NonEmptyList[String]): NonEmptyList[NonEmptyList[String]] =
-      if (!allowStartEnd && history.head == "end")
+      if (history.head == "end")
         NonEmptyList.one(history)
       else {
         val possibleNext = getEdgesFrom
+          .andThen(_ - "start")
           .andThen(dedupe(history))
-          .andThen(skipStart)
           .apply(history.head)
 
         NonEmptyList(
@@ -59,8 +53,8 @@ object Day12 extends App {
       .size
   }
 
-  def part1(edges: Set[Edge]) = countPaths(edges, false, true)
-  def part2(edges: Set[Edge]) = countPaths(edges, true, false)
+  def part1(edges: Set[Edge]) = countPaths(edges, false)
+  def part2(edges: Set[Edge]) = countPaths(edges, true)
 
   val parse: List[String] => Set[Edge] =
     _.map(_.split("-") match {

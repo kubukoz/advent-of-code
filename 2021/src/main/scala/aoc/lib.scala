@@ -12,7 +12,12 @@ object lib {
 
   def readAll(fileName: String): String = readAllLines(fileName).mkString("\n")
 
-  def assertEquals[A](actual: => A, expected: A, description: String): Unit = {
+  def assertEquals[A](
+    actual: => A,
+    expected: A,
+    description: String,
+    showResult: Boolean = true,
+  ): Unit = {
     val start = System.nanoTime()
     val result = actual
     val end = System.nanoTime()
@@ -26,10 +31,16 @@ object lib {
             .filterNot(_.isEmpty())
             .mkString(" (", "", ")") + s" (${td}ms)"
         )
-    else
+    else {
+      val resultString =
+        if (showResult)
+          s": $expected == $result"
+        else
+          ""
       println(
-        s"${Console.GREEN}Assertion passed ($description): $expected == $result (${td}ms)${Console.RESET}"
+        s"${Console.GREEN}Assertion passed ($description)$resultString (${td}ms)${Console.RESET}"
       )
+    }
   }
 
 }

@@ -37,7 +37,7 @@ object Day13 extends App {
       case (px, py)              => (2 * x - px, py)
     }
 
-    def flipY(y: Int): ((Int, Int)) => (Int, Int) = p => flipX(y)(p.swap).swap
+    def flipY(y: Int): ((Int, Int)) => (Int, Int) = flipX(y).andThen(_.swap).compose(_.swap)
 
     val mod =
       fold match {

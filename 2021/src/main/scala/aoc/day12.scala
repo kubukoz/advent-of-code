@@ -15,7 +15,7 @@ object Day12 extends App {
 
   def countPaths(edges: Set[Edge], allowSmallDuplicate: Boolean, allowStartEnd: Boolean): Int = {
 
-    val getEdgesFrom = {
+    val getEdgesFrom: String => Set[String] = {
       val edgesByFrom = edges.groupBy(_.from).map(_.map(_.map(_.to)))
       val edgesByTo = edges.groupBy(_.to).map(_.map(_.map(_.from)))
 

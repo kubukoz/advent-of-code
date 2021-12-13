@@ -6,28 +6,6 @@ import util.chaining._
 
 object Day13 extends App {
 
-  val example = """6,10
-0,14
-9,10
-0,3
-10,4
-4,11
-6,0
-6,12
-4,1
-0,13
-10,12
-3,4
-3,0
-8,4
-1,10
-2,14
-8,10
-9,0
-
-fold along y=7
-fold along x=5"""
-
   def parse(input: String): (Set[(Int, Int)], List[Fold]) = {
     val Array(positionString, foldString) = input.split("\n\n")
 
@@ -53,35 +31,22 @@ fold along x=5"""
   case class Horizontal(x: Int) extends Fold
   case class Vertical(y: Int) extends Fold
 
-  def perform(positions: Set[(Int, Int)], fold: Fold) =
-    fold match {
-      case Horizontal(x) =>
-        positions.map { case (px, py) =>
-          val newX =
-            if (px < x)
-              px
-            else {
-              val diff = px - x
-
-              x - diff
-            }
-
-          (newX, py)
-        }
-      case Vertical(y) =>
-        positions.map { case (x, py) =>
-          val newY =
-            if (py < y)
-              py
-            else {
-              val diff = py - y
-
-              y - diff
-            }
-
-          (x, newY)
-        }
+  def perform(positions: Set[(Int, Int)], fold: Fold) = {
+    def flipX(x: Int): ((Int, Int)) => (Int, Int) = {
+      case p @ (px, _) if px < x => p
+      case (px, py)              => (2 * x - px, py)
     }
+
+    def flipY(y: Int): ((Int, Int)) => (Int, Int) = p => flipX(y)(p.swap).swap
+
+    val mod =
+      fold match {
+        case Horizontal(x) => flipX(x)
+        case Vertical(y)   => flipY(y)
+      }
+
+    positions.map(mod)
+  }
 
   def show(positions: Set[(Int, Int)]) = {
     val maxX = positions.map(_._1).max

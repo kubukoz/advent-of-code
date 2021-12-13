@@ -1,6 +1,7 @@
 package aoc
 
 import scala.io.Source
+import scala.concurrent.duration._
 
 import scala.util.Using
 
@@ -11,18 +12,24 @@ object lib {
 
   def readAll(fileName: String): String = readAllLines(fileName).mkString("\n")
 
-  def assertEquals[A](actual: A, expected: A, description: String): Unit =
-    if (actual != expected)
+  def assertEquals[A](actual: => A, expected: A, description: String): Unit = {
+    val start = System.nanoTime()
+    val result = actual
+    val end = System.nanoTime()
+    val td = (end - start).nanos.toMillis
+
+    if (result != expected)
       Console
         .err
         .println(
-          s"Assertion failed: expected $expected, got $actual" + Some(description)
+          s"Assertion failed: expected $expected, got $result" + Some(description)
             .filterNot(_.isEmpty())
-            .mkString(" (", "", ")")
+            .mkString(" (", "", ")") + s" (${td}ms)"
         )
     else
       println(
-        s"${Console.GREEN}Assertion passed ($description): $expected == $actual${Console.RESET}"
+        s"${Console.GREEN}Assertion passed ($description): $expected == $result (${td}ms)${Console.RESET}"
       )
+  }
 
 }

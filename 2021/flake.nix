@@ -3,6 +3,7 @@
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.unison.url = "github:ceedubs/unison-nix";
   inputs.unison.inputs.nixpkgs.follows = "nixpkgs";
+  inputs.unison.inputs.flake-utils.follows = "flake-utils";
 
   outputs = { nixpkgs, flake-utils, unison, ... }: flake-utils.lib.eachSystem [ "x86_64-darwin" "aarch64-darwin" ] (
     system:

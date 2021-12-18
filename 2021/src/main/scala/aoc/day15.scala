@@ -8,6 +8,7 @@ import scala.collection.mutable.PriorityQueue
 import util.chaining._
 import aoc.lib._
 import java.{util => ju}
+import cats.kernel.Order
 
 object Day15 extends App {
 
@@ -43,33 +44,42 @@ object Day15 extends App {
       }
     }
 
-    val totalSize = data.size
-    val oneperc = totalSize / 100
-
     @tailrec
-    def go(unvisited: Set[(Int, Int)], distances: Data[Double]): Long =
-      if (unvisited.isEmpty)
-        distances(to).toLong
-      else {
-        val current = unvisited.minBy(distances)
+    def go(
+      unvisited: Set[(Int, Int)],
+      distances: Data[Double],
+      next: Set[((Int, Int), Double)],
+    ): Long = {
+      val n = next.minBy(_._2)
+      val (current, _) = n
 
-        val selfDistance = distances(current)
-        val unvisitedNeighbors = withNeighbors(current).filter(unvisited)
+      val selfDistance = distances(current)
+      val unvisitedNeighbors = (withNeighbors(current) & unvisited).map { p =>
+        (p, distances(p))
+      }
 
-        val newDistances =
-          unvisitedNeighbors.map { coord =>
-            (coord, distances(coord) min (selfDistance + data(coord)))
-          }.toMap
+      val newNeighborDistances =
+        unvisitedNeighbors.map { case (coord, dist) =>
+          (coord, dist min (selfDistance + data(coord)))
+        }.toMap
 
+      val newDistances = distances ++ newNeighborDistances
+
+      if (unvisited.sizeIs > 1) {
         go(
           unvisited = unvisited - current,
-          distances = distances ++ newDistances,
+          distances = newDistances,
+          next = next - n ++ newNeighborDistances,
         )
+      } else {
+        newDistances(to).toLong
       }
+    }
 
     go(
       unvisited = data.keySet,
       distances = data.map { case (coords, _) => coords -> Double.PositiveInfinity } + (from -> 0),
+      next = Set(from -> 0),
     )
   }
 
@@ -106,12 +116,10 @@ object Day15 extends App {
     assertEquals(solve(example), (40, 315), "Example")
   }
 
-  if (false)
-    locally {
-      val fromFile = aoc.lib.readAllLines("day15.txt").map(_.toList)
-      val (part1, part2) = solve(fromFile)
+  locally {
+    val fromFile = aoc.lib.readAllLines("day15.txt").map(_.toList)
+    val (part1, part2) = solve(fromFile)
 
-      println(part2)
-      // assertEquals(solve(fromFile),(707,))
-    }
+    assertEquals(solve(fromFile), (707, 2942), "Result")
+  }
 }

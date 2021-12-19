@@ -48,10 +48,9 @@ object Day15 extends App {
     def go(
       unvisited: Set[(Int, Int)],
       distances: Data[Double],
-      next: Set[((Int, Int), Double)],
+      next: Map[(Int, Int), Double],
     ): Long = {
-      val n = next.minBy(_._2)
-      val (current, _) = n
+      val (current, _) = next.minBy(_._2)
 
       val selfDistance = distances(current)
       val unvisitedNeighbors = (withNeighbors(current) & unvisited).map { p =>
@@ -69,7 +68,7 @@ object Day15 extends App {
         go(
           unvisited = unvisited - current,
           distances = newDistances,
-          next = next - n ++ newNeighborDistances,
+          next = next - current ++ newNeighborDistances,
         )
       } else {
         newDistances(to).toLong
@@ -79,7 +78,7 @@ object Day15 extends App {
     go(
       unvisited = data.keySet,
       distances = data.map { case (coords, _) => coords -> Double.PositiveInfinity } + (from -> 0),
-      next = Set(from -> 0),
+      next = Map(from -> 0),
     )
   }
 

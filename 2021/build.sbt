@@ -9,6 +9,7 @@ val root = project
     ),
     scalaVersion := "2.13.7",
     scalacOptions ++= Seq(
-      "-Ywarn-unused:imports"
+      "-Ywarn-unused:imports",
+      "-Xsource:3.0",
     ),
   )

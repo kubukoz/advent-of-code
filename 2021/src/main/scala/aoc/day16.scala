@@ -60,15 +60,15 @@ object Day16 extends App {
     implicit def fromZero(zero: 0): Bit = _0
   }
 
-  case class EpislonError(msg: String, index: Int) extends Throwable(msg + " at index " + index)
+  case class EpsilonError(msg: String, index: Int) extends Throwable(msg + " at index " + index)
 
   case class ParserState[A](bits: Vector[A], index: Int) {
 
-    def proceed: Either[EpislonError, (A, ParserState[A])] =
+    def proceed: Either[EpsilonError, (A, ParserState[A])] =
       if (index < bits.length)
         Right((bits(index), copy(index = index + 1)))
       else
-        Left(EpislonError("No more bits", index))
+        Left(EpsilonError("No more bits", index))
 
   }
 
@@ -83,8 +83,8 @@ object Day16 extends App {
       }
     }
 
-    def parse(s: Vector[Bit]): Either[EpislonError, A] = Parser
-      .compile[StateT[Either[EpislonError, *], ParserState[Bit], *], A](this)
+    def parse(s: Vector[Bit]): Either[EpsilonError, A] = Parser
+      .compile[StateT[Either[EpsilonError, *], ParserState[Bit], *], A](this)
       .runA(ParserState(s, 0))
 
     def parseUnsafe(s: Vector[Bit]): A = parse(s).toTry.get
@@ -93,7 +93,7 @@ object Day16 extends App {
 
   object Parser {
 
-    def compile[F[_]: MonadError[*[_], EpislonError], A](
+    def compile[F[_]: MonadError[*[_], EpsilonError], A](
       p: Parser[A]
     )(
       implicit S: Stateful[F, ParserState[Bit]]
@@ -117,40 +117,40 @@ object Day16 extends App {
     case class FlatMap[A, B](fa: Parser[A], f: A => Parser[B]) extends Parser[B]
     case object Index extends Parser[Int]
     case object Bit extends Parser[Bit]
-    case class Raise(e: EpislonError) extends Parser[Nothing]
-    case class Attempt[A](fa: Parser[A]) extends Parser[Either[EpislonError, A]]
+    case class Raise(e: EpsilonError) extends Parser[Nothing]
+    case class Attempt[A](fa: Parser[A]) extends Parser[Either[EpsilonError, A]]
 
     val unit: Parser[Unit] = Pure(())
 
-    implicit val monad: MonadError[Parser, EpislonError] =
-      new StackSafeMonad[Parser] with MonadError[Parser, EpislonError] {
+    implicit val monad: MonadError[Parser, EpsilonError] =
+      new StackSafeMonad[Parser] with MonadError[Parser, EpsilonError] {
         def flatMap[A, B](fa: Parser[A])(f: A => Parser[B]): Parser[B] = FlatMap(fa, f)
 
         def pure[A](x: A): Parser[A] = Pure(x)
 
-        def raiseError[A](e: EpislonError): Parser[A] = Raise(e)
+        def raiseError[A](e: EpsilonError): Parser[A] = Raise(e)
 
         def handleErrorWith[A](
           fa: Parser[A]
         )(
-          f: EpislonError => Parser[A]
+          f: EpsilonError => Parser[A]
         ): Parser[A] = attempt(fa).flatMap(_.fold(f, pure))
 
-        override def attempt[A](fa: Parser[A]): Parser[Either[EpislonError, A]] = Attempt(fa)
+        override def attempt[A](fa: Parser[A]): Parser[Either[EpsilonError, A]] = Attempt(fa)
 
       }
 
     def const(bits: List[Bit]): Parser[Unit] =
       (nBits(bits.size), Parser.index).mapN {
         case (actual, _) if actual == bits => Right(())
-        case (actual, i)                   => Left(EpislonError(s"Expected $bits, got $actual", i))
+        case (actual, i)                   => Left(EpsilonError(s"Expected $bits, got $actual", i))
       }.rethrow
 
     def nBits(n: Int): Parser[List[Bit]] = bit.replicateA(n)
     val bit: Parser[Bit] = Bit
     val index: Parser[Int] = Index
 
-    def raiseMessage(msg: String): Parser[Nothing] = index.flatMap(i => Raise(EpislonError(msg, i)))
+    def raiseMessage(msg: String): Parser[Nothing] = index.flatMap(i => Raise(EpsilonError(msg, i)))
   }
 
   def parseBits(bits: List[Bit]): Int = lang.Integer.parseInt(bits.map(_.toChar).mkString, 2)

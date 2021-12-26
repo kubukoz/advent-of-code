@@ -3,7 +3,6 @@ package aoc
 import aoc.lib._
 import cats.Monad
 import cats.MonadError
-import cats.StackSafeMonad
 import cats.data.StateT
 import cats.implicits._
 import cats.mtl.Stateful
@@ -68,67 +67,6 @@ object Day16 extends App {
       else
         Left(EpsilonError("No more bits", index))
 
-  }
-
-  sealed trait Parser[+A] {
-
-    def parse(s: Vector[Bit]): Either[EpsilonError, A] = Parser
-      .compile[StateT[Either[EpsilonError, *], ParserState[Bit], *], A](this)
-      .runA(ParserState(s, 0))
-
-    def parseUnsafe(s: Vector[Bit]): A = parse(s).toTry.get
-
-  }
-
-  object Parser {
-
-    def compile[F[_]: MonadError[*[_], EpsilonError], A](
-      p: Parser[A]
-    )(
-      implicit S: Stateful[F, ParserState[Bit]]
-    ): F[A] =
-      p match {
-        // free stuff
-        case Pure(a)          => a.pure[F]
-        case Raise(e)         => e.raiseError[F, A]
-        case f: FlatMap[a, b] => compile[F, a](f.fa).flatMap(a => compile[F, A](f.f(a)))
-        case a: Attempt[a]    => compile[F, a](a.fa).attempt.map(identity(_))
-        // actual stuff
-        case Index => S.inspect(_.index)
-        case Bit =>
-          S.inspect(_.proceed)
-            .rethrow
-            .flatMap { case (r, s) => S.set(s).as(r) }
-            .map(identity(_))
-      }
-
-    case class Pure[A](a: A) extends Parser[A]
-    case class FlatMap[A, B](fa: Parser[A], f: A => Parser[B]) extends Parser[B]
-    case object Index extends Parser[Int]
-    case object Bit extends Parser[Bit]
-    case class Raise(e: EpsilonError) extends Parser[Nothing]
-    case class Attempt[A](fa: Parser[A]) extends Parser[Either[EpsilonError, A]]
-
-    implicit val monad: MonadError[Parser, EpsilonError] =
-      new StackSafeMonad[Parser] with MonadError[Parser, EpsilonError] {
-        def flatMap[A, B](fa: Parser[A])(f: A => Parser[B]): Parser[B] = FlatMap(fa, f)
-
-        def pure[A](x: A): Parser[A] = Pure(x)
-
-        def raiseError[A](e: EpsilonError): Parser[A] = Raise(e)
-
-        def handleErrorWith[A](
-          fa: Parser[A]
-        )(
-          f: EpsilonError => Parser[A]
-        ): Parser[A] = attempt(fa).flatMap(_.fold(f, pure))
-
-        override def attempt[A](fa: Parser[A]): Parser[Either[EpsilonError, A]] = Attempt(fa)
-
-      }
-
-    val bit: Parser[Bit] = Bit
-    val index: Parser[Int] = Index
   }
 
   trait ParserApi[F[_]] {
@@ -248,7 +186,7 @@ object Day16 extends App {
     val api = ParserApi[F]
     import ParserApi.ops._
 
-    val version = api.nBits(3).map(parseBits(_)).map(Version(_))
+    val version: F[Version] = api.nBits(3).map(parseBits(_)).map(Version(_))
 
     val literal: F[Literal] = {
       val content = api.nBits(5).takeThrough(_.head.isOne).map(_.map(_.tail).flatten)
@@ -283,19 +221,25 @@ object Day16 extends App {
     literal.widen[Packet].orElse(operator)
   }
 
-  object parsers {
+  def parse(bits: Vector[Bit]): Either[EpsilonError, Packet] = {
 
-    val packet = {
-      implicit val parsersParser: ParserApi[Parser] =
-        new ParserApi[Parser] {
-          def index: Parser[Int] = Parser.index
+    implicit def parserSApi[F[_]: MonadError[*[_], EpsilonError]](
+      implicit S: Stateful[F, ParserState[Bit]]
+    ): ParserApi[F] =
+      new ParserApi[F] {
+        val index: F[Int] = S.inspect(_.index)
 
-          def bit: Parser[Bit] = Parser.bit
+        val bit: F[Bit] = S
+          .inspect(_.proceed)
+          .rethrow
+          .flatMap { case (r, s) => S.set(s).as(r) }
+          .map(identity(_))
 
-        }
-      parsePacket[Parser](parsersParser, Parser.monad)
-    }
+      }
 
+    parsePacket[StateT[Either[EpsilonError, *], ParserState[Bit], *]].runA(
+      ParserState(bits, 0)
+    )
   }
 
   val realInput = readAll("day16.txt")
@@ -318,7 +262,7 @@ object Day16 extends App {
     operator = (_, op, children) => children.reduceLeft(op.eval),
   )
 
-  val parsed = parsers.packet.parseUnsafe(data)
+  val parsed = parse(data).toTry.get
 
   assertEquals(sumVersions(parsed), 947, "Part 1")
   assertEquals(eval(parsed), 660797830937L, "Part 2")

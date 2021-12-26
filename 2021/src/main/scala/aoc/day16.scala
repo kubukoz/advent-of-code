@@ -113,6 +113,20 @@ object Day16 extends App {
 
     }
 
+    implicit def statefulParserApi[F[_]: MonadError[*[_], EpsilonError]](
+      implicit S: Stateful[F, ParserState[Bit]]
+    ): ParserApi[F] =
+      new ParserApi[F] {
+        val index: F[Int] = S.inspect(_.index)
+
+        val bit: F[Bit] = S
+          .inspect(_.proceed)
+          .rethrow
+          .flatMap { case (r, s) => S.set(s).as(r) }
+          .map(identity(_))
+
+      }
+
   }
 
   def parseBits(bits: List[Bit]): Int = lang.Integer.parseInt(bits.map(_.toChar).mkString, 2)
@@ -221,26 +235,10 @@ object Day16 extends App {
     literal.widen[Packet].orElse(operator)
   }
 
-  def parse(bits: Vector[Bit]): Either[EpsilonError, Packet] = {
-
-    implicit def parserSApi[F[_]: MonadError[*[_], EpsilonError]](
-      implicit S: Stateful[F, ParserState[Bit]]
-    ): ParserApi[F] =
-      new ParserApi[F] {
-        val index: F[Int] = S.inspect(_.index)
-
-        val bit: F[Bit] = S
-          .inspect(_.proceed)
-          .rethrow
-          .flatMap { case (r, s) => S.set(s).as(r) }
-          .map(identity(_))
-
-      }
-
+  def parse(bits: Vector[Bit]): Either[EpsilonError, Packet] =
     parsePacket[StateT[Either[EpsilonError, *], ParserState[Bit], *]].runA(
       ParserState(bits, 0)
     )
-  }
 
   val realInput = readAll("day16.txt")
   val literal = "D2FE28"

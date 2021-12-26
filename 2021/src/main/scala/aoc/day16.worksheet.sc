@@ -159,27 +159,72 @@ object Parser {
   def raiseMessage(msg: String): Parser[Nothing] = index.flatMap(i => Raise(EpislonError(msg, i)))
 }
 
-def parseBits(bits: List[Bit]): Int = Integer.parseInt(bits.map(_.toChar).mkString, 2)
+def parseBits(bits: List[Bit]): Int = lang.Integer.parseInt(bits.map(_.toChar).mkString, 2)
+def parseBitsToLong(bits: List[Bit]): Long = lang.Long.parseLong(bits.map(_.toChar).mkString, 2)
 
-case class Version(value: Int)
+case class Version(value: Long)
 
 sealed trait Packet extends Product with Serializable {
 
-  def fold[A](literal: Version => A, operator: (Version, List[A]) => A): A = {
+  def fold[A](literal: (Version, Long) => A, operator: (Version, OpType, List[A]) => A): A = {
     def recurse(packet: Packet) = packet.fold(literal, operator)
 
     this match {
-      case Literal(v, _)              => literal(v)
-      case Operator(version, _, subs) => operator(version, subs.map(recurse))
+      case Literal(version, value)     => literal(version, value)
+      case Operator(version, op, subs) => operator(version, op, subs.map(recurse))
     }
   }
 
 }
 
-case class Operator(version: Version, tpe: List[Bit], subs: List[Packet]) extends Packet
+case class Operator(version: Version, tpe: OpType, subs: List[Packet]) extends Packet
 
-case class Literal(version: Version, value: List[Bit]) extends Packet {
-  def valueDec: Int = parseBits(value)
+case class Literal(version: Version, value: Long) extends Packet
+
+sealed trait OpType extends Product with Serializable {
+  import OpType._
+
+  def eval: (Long, Long) => Long = {
+    def cond(f: (Long, Long) => Boolean): (Long, Long) => Long =
+      (a, b) =>
+        if (f(a, b))
+          1L
+        else
+          0L
+
+    this match {
+      case Sum         => _ + _
+      case Product     => _ * _
+      case Minimum     => _ min _
+      case Maximum     => _ max _
+      case GreaterThan => cond(_ > _)
+      case LessThan    => cond(_ < _)
+      case EqualTo     => cond(_ == _)
+    }
+  }
+
+}
+
+object OpType {
+  case object Sum extends OpType
+  case object Product extends OpType
+  case object Minimum extends OpType
+  case object Maximum extends OpType
+  case object GreaterThan extends OpType
+  case object LessThan extends OpType
+  case object EqualTo extends OpType
+
+  val values = Map(
+    0 -> Sum,
+    1 -> Product,
+    2 -> Minimum,
+    3 -> Maximum,
+//  4 -> Sike
+    5 -> GreaterThan,
+    6 -> LessThan,
+    7 -> EqualTo,
+  )
+
 }
 
 object parsers {
@@ -191,14 +236,20 @@ object parsers {
     (
       version,
       const(List(1, 0, 0)) *>
-        content,
+        content.map(parseBitsToLong),
     ).mapN(Literal.apply)
   }
+
+  def parseType(i: Int): Parser[OpType] =
+    OpType
+      .values
+      .get(i)
+      .fold[Parser[OpType]](Parser.raiseMessage(s"Unknown op type: ${i}"))(_.pure[Parser])
 
   val operator: Parser[Packet] =
     (
       version,
-      nBits(3),
+      nBits(3).map(parseBits).flatMap(parseType),
       bit.flatMap {
         case `_0` =>
           nBits(15).map(parseBits).flatMap { subpacketsLength =>
@@ -231,12 +282,23 @@ def toBin(input: String) = input.flatMap(key(_)).toVector
 val data = toBin(realInput)
 
 def sumVersions(packet: Packet) = packet.fold[Long](
-  literal = _.value.toLong,
-  operator = (v, children) => v.value.toLong |+| children.combineAll,
+  literal = (version, _) => version.value,
+  operator = (version, _, children) => version.value |+| children.combineAll,
+)
+
+def eval(packet: Packet) = packet.fold[Long](
+  literal = (_, value) => value,
+  operator = (_, op, children) => children.reduceLeft(op.eval),
 )
 
 import util.chaining._
-parsers
+
+val parsed = parsers
   .operator
   .parseUnsafe(data)
+
+parsed
   .pipe(sumVersions)
+
+parsed
+  .pipe(eval)

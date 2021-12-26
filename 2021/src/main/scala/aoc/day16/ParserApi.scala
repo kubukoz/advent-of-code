@@ -19,11 +19,10 @@ object ParserApi {
       private val self: ParserApi[F]
     ) {
 
-      def const(bits: List[Bit]): F[Unit] =
-        (nBits(bits.size), self.index).mapN {
-          case (actual, _) if actual == bits => Right(())
-          case (actual, i) => Left(EpsilonError(s"Expected $bits, got $actual", i))
-        }.rethrow
+      def const(bits: List[Bit]): F[Unit] = nBits(bits.size).flatMap {
+        case actual if actual == bits => ().pure[F]
+        case actual                   => raiseMessage(s"Expected $bits, got $actual")
+      }
 
       def nBits(n: Int): F[List[Bit]] = self.bit.replicateA(n)
 

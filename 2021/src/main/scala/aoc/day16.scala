@@ -1,16 +1,14 @@
 package aoc
 
+import aoc.lib._
+import cats.Monad
+import cats.MonadError
+import cats.StackSafeMonad
+import cats.data.StateT
+import cats.implicits._
 import cats.mtl.Stateful
 
-import cats.data.StateT
-
-import cats.MonadError
-
-import cats.StackSafeMonad
-
 import java.lang
-import cats.implicits._
-import aoc.lib._
 
 object Day16 extends App {
 
@@ -74,15 +72,6 @@ object Day16 extends App {
 
   sealed trait Parser[+A] {
 
-    def takeThrough(p: A => Boolean): Parser[List[A]] = List.empty[A].tailRecM { memory =>
-      this.map { a =>
-        if (p(a))
-          Left(a :: memory)
-        else
-          Right((a :: memory).reverse)
-      }
-    }
-
     def parse(s: Vector[Bit]): Either[EpsilonError, A] = Parser
       .compile[StateT[Either[EpsilonError, *], ParserState[Bit], *], A](this)
       .runA(ParserState(s, 0))
@@ -120,8 +109,6 @@ object Day16 extends App {
     case class Raise(e: EpsilonError) extends Parser[Nothing]
     case class Attempt[A](fa: Parser[A]) extends Parser[Either[EpsilonError, A]]
 
-    val unit: Parser[Unit] = Pure(())
-
     implicit val monad: MonadError[Parser, EpsilonError] =
       new StackSafeMonad[Parser] with MonadError[Parser, EpsilonError] {
         def flatMap[A, B](fa: Parser[A])(f: A => Parser[B]): Parser[B] = FlatMap(fa, f)
@@ -140,17 +127,54 @@ object Day16 extends App {
 
       }
 
-    def const(bits: List[Bit]): Parser[Unit] =
-      (nBits(bits.size), Parser.index).mapN {
-        case (actual, _) if actual == bits => Right(())
-        case (actual, i)                   => Left(EpsilonError(s"Expected $bits, got $actual", i))
-      }.rethrow
-
-    def nBits(n: Int): Parser[List[Bit]] = bit.replicateA(n)
     val bit: Parser[Bit] = Bit
     val index: Parser[Int] = Index
+  }
 
-    def raiseMessage(msg: String): Parser[Nothing] = index.flatMap(i => Raise(EpsilonError(msg, i)))
+  trait ParserApi[F[_]] {
+    def index: F[Int]
+    def bit: F[Bit]
+  }
+
+  object ParserApi {
+    def apply[F[_]](implicit F: ParserApi[F]): ParserApi[F] = F
+
+    object ops {
+
+      implicit class ParsersMonadicOps[F[_]: MonadError[*[_], EpsilonError]](
+        private val self: ParserApi[F]
+      ) {
+
+        def const(bits: List[Bit]): F[Unit] =
+          (nBits(bits.size), self.index).mapN {
+            case (actual, _) if actual == bits => Right(())
+            case (actual, i) => Left(EpsilonError(s"Expected $bits, got $actual", i))
+          }.rethrow
+
+        def nBits(n: Int): F[List[Bit]] = self.bit.replicateA(n)
+
+        def raiseMessage[A](
+          msg: String
+        ): F[A] = self.index.flatMap(i => EpsilonError(msg, i).raiseError[F, A])
+
+      }
+
+      implicit class ParserOps[F[_]: ParserApi, A](private val self: F[A]) {
+
+        def takeThrough(
+          p: A => Boolean
+        )(
+          implicit F: Monad[F]
+        ): F[List[A]] = List.empty[A].tailRecM { memory =>
+          self.map { a =>
+            Either.cond(!p(a), right = (a :: memory).reverse, left = a :: memory)
+          }
+        }
+
+      }
+
+    }
+
   }
 
   def parseBits(bits: List[Bit]): Int = lang.Integer.parseInt(bits.map(_.toChar).mkString, 2)
@@ -178,14 +202,14 @@ object Day16 extends App {
   sealed trait OpType extends Product with Serializable {
     import OpType._
 
-    def eval: (Long, Long) => Long = {
-      def cond(f: (Long, Long) => Boolean): (Long, Long) => Long =
-        (a, b) =>
-          if (f(a, b))
-            1L
-          else
-            0L
+    private def cond(f: (Long, Long) => Boolean): (Long, Long) => Long =
+      (a, b) =>
+        if (f(a, b))
+          1L
+        else
+          0L
 
+    def eval: (Long, Long) => Long =
       this match {
         case Sum         => _ + _
         case Product     => _ * _
@@ -195,7 +219,6 @@ object Day16 extends App {
         case LessThan    => cond(_ < _)
         case EqualTo     => cond(_ == _)
       }
-    }
 
   }
 
@@ -213,7 +236,7 @@ object Day16 extends App {
       1 -> Product,
       2 -> Minimum,
       3 -> Maximum,
-//  4 -> Sike
+//    4 -> Sike
       5 -> GreaterThan,
       6 -> LessThan,
       7 -> EqualTo,
@@ -221,48 +244,57 @@ object Day16 extends App {
 
   }
 
-  object parsers {
-    import Parser._
-    val version = nBits(3).map(parseBits(_)).map(Version(_))
+  def parsePacket[F[_]: ParserApi: MonadError[*[_], EpsilonError]]: F[Packet] = {
+    val api = ParserApi[F]
+    import ParserApi.ops._
 
-    val literal: Parser[Literal] = {
-      val content = nBits(5).takeThrough(_.head.isOne).map(_.map(_.tail).flatten)
+    val version = api.nBits(3).map(parseBits(_)).map(Version(_))
 
+    val literal: F[Literal] = {
+      val content = api.nBits(5).takeThrough(_.head.isOne).map(_.map(_.tail).flatten)
       (
         version,
-        const(List(1, 0, 0)) *>
+        api.const(List(1, 0, 0)) *>
           content.map(parseBitsToLong),
       ).mapN(Literal.apply)
     }
 
-    def parseType(i: Int): Parser[OpType] =
-      OpType
-        .values
-        .get(i)
-        .fold[Parser[OpType]](Parser.raiseMessage(s"Unknown op type: ${i}"))(_.pure[Parser])
-
-    val operator: Parser[Packet] =
+    lazy val operator: F[Packet] =
       (
         version,
-        nBits(3).map(parseBits).flatMap(parseType),
-        bit.flatMap {
+        api.nBits(3).map(parseBits).map(OpType.values),
+        api.bit.flatMap {
           case `_0` =>
-            nBits(15).map(parseBits).flatMap { subpacketsLength =>
-              index.flatMap { indexBefore =>
+            api.nBits(15).map(parseBits).flatMap { subpacketsLength =>
+              api.index.flatMap { indexBefore =>
                 val targetIndex = indexBefore + subpacketsLength
 
-                packet.whileM[List](Parser.index.map(_ < targetIndex))
+                parsePacket[F].whileM[List](api.index.map(_ < targetIndex))
               }
             }
 
           case `_1` =>
-            nBits(11).map(parseBits).flatMap { subpacketCount =>
-              packet.replicateA(subpacketCount)
+            api.nBits(11).map(parseBits).flatMap { subpacketCount =>
+              parsePacket[F].replicateA(subpacketCount)
             }
         },
       ).mapN(Operator.apply)
 
-    lazy val packet = literal.widen[Packet].orElse(operator)
+    literal.widen[Packet].orElse(operator)
+  }
+
+  object parsers {
+
+    val packet = {
+      implicit val parsersParser: ParserApi[Parser] =
+        new ParserApi[Parser] {
+          def index: Parser[Int] = Parser.index
+
+          def bit: Parser[Bit] = Parser.bit
+
+        }
+      parsePacket[Parser](parsersParser, Parser.monad)
+    }
 
   }
 

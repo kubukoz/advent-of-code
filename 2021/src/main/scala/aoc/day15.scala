@@ -1,14 +1,11 @@
 package aoc
 
+import aoc.lib._
 import cats.implicits._
 
 import scala.annotation.tailrec
-import scala.collection.mutable.PriorityQueue
 
 import util.chaining._
-import aoc.lib._
-import java.{util => ju}
-import cats.kernel.Order
 
 object Day15 extends App {
 

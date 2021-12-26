@@ -21,36 +21,26 @@ object Day16 extends App {
 
   val key =
     """0 = 0000
-1 = 0001
-2 = 0010
-3 = 0011
-4 = 0100
-5 = 0101
-6 = 0110
-7 = 0111
-8 = 1000
-9 = 1001
-A = 1010
-B = 1011
-C = 1100
-D = 1101
-E = 1110
-F = 1111"""
+       1 = 0001
+       2 = 0010
+       3 = 0011
+       4 = 0100
+       5 = 0101
+       6 = 0110
+       7 = 0111
+       8 = 1000
+       9 = 1001
+       A = 1010
+       B = 1011
+       C = 1100
+       D = 1101
+       E = 1110
+       F = 1111"""
       .split("\n")
+      .map(_.trim)
       .map { case s"$ch = $encoding" => ch.head -> encoding.map(charToBit) }
       .toMap
 
-//format:
-// version <3 bits> type <3 bits>...
-
-// type 100:
-// 101111111000101000
-// 10111 11110 00101 000
-
-// other types:
-// version <3 bits> type <3 bits> length <1/0> subpackets
-// length=0 => next 15 bits are the total length in bits of the nested subpackets
-// length=1 => next 11 bits are the # of nested subpackets
   sealed trait Bit extends Product with Serializable {
     def isOne = this == _1
 
@@ -296,15 +286,8 @@ F = 1111"""
     operator = (_, op, children) => children.reduceLeft(op.eval),
   )
 
-  import util.chaining._
+  val parsed = parsers.packet.parseUnsafe(data)
 
-  val parsed = parsers
-    .packet
-    .parseUnsafe(data)
-
-  parsed
-    .pipe(sumVersions)
-
-  parsed
-    .pipe(eval)
+  assertEquals(sumVersions(parsed), 947, "Part 1")
+  assertEquals(eval(parsed), 660797830937L, "Part 2")
 }

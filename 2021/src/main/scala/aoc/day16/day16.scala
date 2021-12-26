@@ -9,6 +9,9 @@ import java.lang
 
 import Packet._
 import Bit._
+import cats.Defer
+import cats.data.EitherT
+import cats.Eval
 
 case class EpsilonError(msg: String, index: Int) extends Throwable(msg + " at index " + index)
 
@@ -24,7 +27,9 @@ case class ParserState[A](bits: Vector[A], index: Int) {
 
 object Day16 extends App {
 
-  def parsePacket[F[_]: ParserApi: MonadError[*[_], EpsilonError]]: F[Packet] = {
+  def parsePacket[
+    F[_]: ParserApi: MonadError[*[_], EpsilonError]: Defer
+  ]: F[Packet] = Defer[F].fix[Packet] { self =>
     val api = ParserApi[F]
     import ParserApi.ops._
 
@@ -50,10 +55,10 @@ object Day16 extends App {
               subpacketsLength <- api.nBits(15).map(parseBits)
               indexBefore <- api.index
               targetIndex = indexBefore + subpacketsLength
-              nested <- parsePacket[F].whileM[List](api.index.map(_ < targetIndex))
+              nested <- self.whileM[List](api.index.map(_ < targetIndex))
             } yield nested
 
-          case `_1` => api.nBits(11).map(parseBits).flatMap(parsePacket[F].replicateA(_))
+          case `_1` => api.nBits(11).map(parseBits).flatMap(self.replicateA(_))
         }
 
       (
@@ -69,10 +74,12 @@ object Day16 extends App {
   }
 
   def parse(input: String): Packet =
-    parsePacket[StateT[Either[EpsilonError, *], ParserState[Bit], *]]
+    parsePacket[StateT[EitherT[Eval, EpsilonError, *], ParserState[Bit], *]]
       .runA(
         ParserState(hexToBin(input), 0)
       )
+      .value
+      .value
       .toTry
       .get
 

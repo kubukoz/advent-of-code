@@ -2,11 +2,11 @@ package aoc
 
 import cats.Defer
 import cats.Monad
+import cats.data.Kleisli
 import cats.data.OptionT
 import cats.data.State
-import cats.mtl.Stateful
 import cats.mtl.Ask
-import cats.data.Kleisli
+import cats.mtl.Stateful
 
 object Day14 extends App {
   import lib._
@@ -45,7 +45,7 @@ object Day14 extends App {
                 case _ :: _ =>
                   val updatedResult = mergeInit.updatedWith(two)(_.map(_ - 1))
 
-                  recurseInternal(two :: rest, updatedResult |+| memory)
+                  recurseInternal(two :: rest, memory |+| updatedResult)
               }
             }
 

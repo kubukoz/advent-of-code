@@ -2,3 +2,4 @@
 .unisonHistory
 **/target
 result
+**/resources/day*.txt

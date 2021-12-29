@@ -1,14 +1,10 @@
-import cats.data
-
 import cats.kernel.Monoid
 
 import aoc.lib._
 import cats.implicits._
+
 val example = readAll("day17-example.txt")
 val fromFile = readAll("day17.txt")
-
-// val input = example
-val input = fromFile
 
 case class Position(
   x: Int,
@@ -18,7 +14,6 @@ case class Position(
 case class Area(from: Position, to: Position) {
 
   def contains(point: Position): Boolean =
-    // todo ordering of this
     (from.x to to.x).contains(point.x) &&
       (from.y to to.y).contains(point.y)
 
@@ -45,11 +40,14 @@ def performStep(state: State): State =
   )
 
 //returns true if the point can theoretically move again and not get away from the area
-// todo: assumes targetx>0 targety<0
-def canReach(position: Position, targetArea: Area): Boolean =
+// assumes targetx>0 targety<0
+def canReach(position: Position, targetArea: Area): Boolean = {
+  require(targetArea.to.x > 0, "target x must be > 0")
+  require(targetArea.from.y < 0, "target y must be < 0")
   position.x <= targetArea.to.x && position.y >= targetArea.from.y
+}
 
-def buildPath(velocity: Position) = LazyList
+def buildPath(velocity: Position, targetArea: Area) = LazyList
   .iterate(State(init, velocity))(performStep)
   .takeWhile { s =>
     canReach(s.position, targetArea)
@@ -58,7 +56,10 @@ def buildPath(velocity: Position) = LazyList
 def matches(
   velocity: Position,
   targetArea: Area,
-): Boolean = buildPath(velocity).exists(s => targetArea.contains(s.position))
+): Boolean = buildPath(velocity, targetArea).exists(s => targetArea.contains(s.position))
+
+// val input = example
+val input = fromFile
 
 val targetArea =
   input match {
@@ -67,24 +68,14 @@ val targetArea =
       Area(Position(xFrom.toInt, yFrom.toInt), Position(xTo.toInt, yTo.toInt))
   }
 
-targetArea
-
-matches(
-  velocity = Position(0, 0),
-  targetArea = targetArea,
-)
-
 val validVelocities = ((1 to targetArea.to.x).toList, targetArea.from.y to (-targetArea.from.y))
   .mapN(Position.apply)
-validVelocities.size
 
-val paths = validVelocities.map(buildPath)
+val paths = validVelocities.map(buildPath(_, targetArea))
 
 val matchingVelocities = paths.filter { v =>
   v.map(_.position).exists(targetArea.contains)
 }
-
-matchingVelocities.size
 
 matchingVelocities
   .maxBy(_.map(_.position.y).max)
@@ -92,4 +83,3 @@ matchingVelocities
   .max
 
 matchingVelocities.size
-//8256

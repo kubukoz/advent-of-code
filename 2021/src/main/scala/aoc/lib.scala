@@ -34,7 +34,7 @@ object lib {
     else {
       val resultString =
         if (showResult)
-          s": $expected == $result"
+          s": $expected"
         else
           ""
       println(

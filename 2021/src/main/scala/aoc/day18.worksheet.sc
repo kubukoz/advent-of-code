@@ -132,44 +132,19 @@ sealed trait Direction {
 case object Left extends Direction
 case object Right extends Direction
 
-case class WithPath[A](content: A, path: Chain[Direction]) {
+type WithPath[A] = Writer[Chain[Direction], A]
 
-  // yo... this is writer
-  def flatMap[B](f: A => WithPath[B]): WithPath[B] = {
-    val r = f(content)
-    WithPath(r.content, path ++ r.path)
+object WithPath {
+  def apply[A](content: A, path: Chain[Direction]): WithPath[A] = Writer(path, content)
+
+  implicit class WithPathOps[A](wp: WithPath[A]) {
+    def content: A = wp.value
+    def path: Chain[Direction] = wp.written
   }
 
 }
 
-implicit val withPathTraversable: NonEmptyTraverse[WithPath] =
-  new NonEmptyTraverse[WithPath] {
-    def foldLeft[A, B](fa: WithPath[A], b: B)(f: (B, A) => B): B = f(b, fa.content)
-
-    def foldRight[A, B](
-      fa: WithPath[A],
-      lb: Eval[B],
-    )(
-      f: (A, Eval[B]) => Eval[B]
-    ): Eval[B] = f(fa.content, lb)
-
-    def reduceLeftTo[A, B](fa: WithPath[A])(f: A => B)(g: (B, A) => B): B = f(fa.content)
-
-    def reduceRightTo[A, B](
-      fa: WithPath[A]
-    )(
-      f: A => B
-    )(
-      g: (A, Eval[B]) => Eval[B]
-    ): Eval[B] = Eval.later(f(fa.content))
-
-    def nonEmptyTraverse[G[_]: Apply, A, B](
-      fa: WithPath[A]
-    )(
-      f: A => G[B]
-    ): G[WithPath[B]] = f(fa.content).map(WithPath(_, fa.path))
-
-  }
+import WithPath._
 
 case class Number[A](n: A) extends Tree[A]
 

@@ -1,3 +1,5 @@
+import cats.data.NonEmptyList
+
 import cats.data.Chain
 
 import scala.collection.immutable
@@ -26,13 +28,44 @@ case class RawPair[A](left: Number[A], right: Number[A], path: Chain[Direction])
 
 sealed trait Tree[A] {
 
+  def render: String =
+    this match {
+      case Number(n, path)      => n.toString()
+      case Pair(lhs, rhs, path) => s"[${lhs.render},${rhs.render}]"
+    }
+
+  def withPathPrefix(prefix: Chain[Direction]): Tree[A]
+
   def down(dir: Direction): Tree[A] =
     this match {
       case Number(n, path)   => sys.error("can't go down on number")
       case p @ Pair(_, _, _) => p.select(dir)
     }
 
-  def downEach(path: Chain[Direction]): List[Tree[A]] = path.toList.scanLeft(this)(_.down(_)).tail
+  def getAt(path: Chain[Direction]): Tree[A] = path.toList.foldLeft(this)(_.down(_))
+
+  def replaceAt(path: Chain[Direction], newValue: Tree[A]): Tree[A] = {
+    def go(rest: List[Direction], self: Tree[A]): Tree[A] =
+      rest match {
+        case Nil      => sys.error("oops")
+        case h :: Nil => self.downReplace(h, newValue)
+        case h :: more =>
+          self.downReplace(
+            // replace at this direction
+            h,
+            // use remainder on path, element is the current element at the direction
+            go(more, self.down(h)),
+          )
+      }
+
+    go(path.toList, this)
+  }
+
+  def downReplace(dir: Direction, newValue: Tree[A]): Tree[A] =
+    this match {
+      case Number(n, path)   => sys.error("can't go down on number")
+      case p @ Pair(_, _, _) => p.insertAt(dir, newValue)
+    }
 
   def path: Chain[Direction]
 
@@ -80,15 +113,40 @@ sealed trait Tree[A] {
 
 }
 
-case class Number[A](n: A, path: Chain[Direction]) extends Tree[A]
+sealed trait Direction {
+
+  def flip: Direction =
+    this match {
+      case Left  => Right
+      case Right => Left
+    }
+
+}
+
+case object Left extends Direction
+case object Right extends Direction
+
+// case class WithPath[A](content: A, path: Chain[Direction])
+case class Number[A](n: A, path: Chain[Direction]) extends Tree[A] {
+  def withPathPrefix(prefix: Chain[Direction]): Tree[A] = copy(path = prefix ++ path)
+}
 
 case class Pair[A](lhs: Tree[A], rhs: Tree[A], path: Chain[Direction]) extends Tree[A] {
+  def withPathPrefix(prefix: Chain[Direction]): Tree[A] = copy(path = prefix ++ path)
 
   def select(dir: Direction): Tree[A] =
     dir match {
       case Left  => lhs
       case Right => rhs
     }
+
+  def insertAt(dir: Direction, value: Tree[A]): Tree[A] = {
+    val newChild = value.withPathPrefix(path.append(dir))
+    dir match {
+      case Left  => copy(lhs = newChild)
+      case Right => copy(rhs = newChild)
+    }
+  }
 
 }
 
@@ -171,28 +229,14 @@ val it =
     self.asRawPair.filter(_.path.size >= 4)
   }.get
 
-sealed trait Direction {
-
-  def flip: Direction =
-    this match {
-      case Left  => Right
-      case Right => Left
-    }
-
-}
-
-case object Left extends Direction
-case object Right extends Direction
-
-def findNext(direction: Direction, self: Snailfish): Option[Snailfish] =
+def findNext(root: Snailfish, self: Snailfish, direction: Direction): Option[Snailfish] =
   // we wanna go left - drop everything including the first Right (from the end), reverse again and add Left
   self.path.toList.reverse.dropWhile(_ == direction) match {
     case _ :: t =>
       val newPath = Chain
         .fromSeq(t.reverse)
         .append(direction)
-      println(newPath)
-      root.downEach(newPath).last.some
+      root.getAt(newPath).some
 
     case _ => None
   }
@@ -203,8 +247,25 @@ it.left.n
 it.right.n
 it.path.toList
 
-val nextBefore = findNext(Left, it.asTree)
-  .map(_.collectLast(_.asLeaf).get.n)
+val nextBefore =
+  findNext(root, it.asTree, Left)
+    .map(_.collectLast(_.asLeaf).get)
+    .get
 
-val nextAfter = findNext(Right, it.asTree)
-  .map(_.collectFirst(_.asLeaf).get.n)
+val afterLeftReplace = root
+  .replaceAt(nextBefore.path, Number(nextBefore.n + it.left.n, Chain.nil))
+
+val nextAfter =
+  findNext(root, it.asTree, Right)
+    .map(_.collectFirst(_.asLeaf).get)
+    .get
+
+val afterRightReplace = afterLeftReplace
+  .replaceAt(nextAfter.path, Number(nextAfter.n + it.right.n, Chain.nil))
+
+val afterAllReplacements = afterRightReplace
+  .replaceAt(it.path, Number(0, Chain.nil))
+
+root.render
+afterRightReplace.render
+afterAllReplacements.render

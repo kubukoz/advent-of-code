@@ -1,3 +1,7 @@
+import cats.kernel.Group
+
+import cats.kernel.Semigroup
+
 import cats.data.Writer
 
 import cats.Apply
@@ -26,12 +30,16 @@ import cats.MonadError
 
 import aoc.lib._
 import cats.implicits._
-val fromFile = readAllLines("day18.txt")
-
-val input = fromFile
 
 case class RawPair[A](left: Number[A], right: Number[A]) {
   def asTree: Tree[A] = Pair(left, right)
+
+  def select(dir: Direction): Number[A] =
+    dir match {
+      case Left  => left
+      case Right => right
+    }
+
 }
 
 sealed trait Tree[A] {
@@ -115,6 +123,17 @@ sealed trait Tree[A] {
     this match {
       case Pair(n1: Number[a], n2: Number[b]) => Some(RawPair(n1, n2))
       case _                                  => None
+    }
+
+  def magnitude(implicit A: Semigroup[A]): A =
+    fold(
+      identity
+    )(_.combineN(3) |+| _.combineN(2))
+
+  def fold[B](number: A => B)(pair: (B, B) => B): B =
+    this match {
+      case Number(n)      => number(n)
+      case Pair(lhs, rhs) => pair(lhs.fold(number)(pair), rhs.fold(number)(pair))
     }
 
 }
@@ -246,43 +265,84 @@ def findNext(
     case _ => None
   }
 
-val data = fromFile.map(parsePair)
+def replaceLeft(it: WithPath[RawPair[Int]]): Snailfish => Snailfish =
+  root =>
+    findNext(root, it.map(_.asTree), Left)
+      .flatMap(_.flatTraverse(_.collectLast(_.traverse(_.asLeaf))))
+      .fold(root) { nb =>
+        root
+          .replaceAt(nb.path, Number(nb.content.n + it.content.left.n))
+      }
 
-// val root = parsePair("[[[[[9,8],1],2],3],4]")
-val root = parsePair("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]")
+def replaceRight(it: WithPath[RawPair[Int]]): Snailfish => Snailfish =
+  root =>
+    findNext(root, it.map(_.asTree), Right)
+      .flatMap(_.flatTraverse(_.collectFirst(_.traverse(_.asLeaf))))
+      .fold(root) { na =>
+        root
+          .replaceAt(na.path, Number(na.content.n + it.content.right.n))
+      }
 
-val it =
-  root.collectFirst { self =>
-    self.traverse(_.asRawPair.filter(_ => self.path.size >= 4))
-  }.get
+def rawExplode(it: WithPath[RawPair[Int]]): Snailfish => Snailfish = _.replaceAt(it.path, Number(0))
 
 def tryExplode(root: Snailfish): Option[Snailfish] = root
   .collectFirst { self =>
     self.traverse(_.asRawPair.filter(_ => self.path.size >= 4))
   }
   .map { it =>
-    val nextBefore =
-      findNext(root, it.map(_.asTree), Left)
-        .map(_.flatMap(_.collectLast(_.traverse(_.asLeaf)).get))
-        .get
-
-    val afterLeftReplace = root
-      .replaceAt(nextBefore.path, Number(nextBefore.content.n + it.content.left.n))
-
-    val nextAfter =
-      findNext(root, it.map(_.asTree), Right)
-        .map(_.flatMap(_.collectFirst(_.traverse(_.asLeaf)).get))
-        .get
-
-    val afterRightReplace = afterLeftReplace
-      .replaceAt(nextAfter.path, Number(nextAfter.content.n + it.content.right.n))
-
-    val afterAllReplacements = afterRightReplace
-      .replaceAt(it.path, Number(0))
-
-    afterAllReplacements
+    replaceLeft(it)
+      .andThen(replaceRight(it))
+      .andThen(rawExplode(it))
+      .apply(root)
   }
 
-root.render
+def trySplit(root: Snailfish): Option[Snailfish] = root
+  .collectFirst { self =>
+    self.traverse(_.asLeaf).filter(_.content.n >= 10)
+  }
+  .map { it =>
+    val n = it.content.n
+    val low = n / 2
+    val high = (n / 2.0f).round
 
-tryExplode(root).get.render == "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]"
+    root.replaceAt(it.path, Pair(Number(low), Number(high)))
+  }
+
+def reduce(
+  root: Snailfish
+): Snailfish = tryExplode(root)
+  .orElse(trySplit(root))
+  .map(reduce)
+  .getOrElse(root)
+
+reduce(parsePair("[[[[[4,3],4],4],[7,[[8,4],9]]],[1,1]]")).render
+
+val fromFile = readAllLines("day18.txt")
+
+val example =
+  """[[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]
+[[[5,[2,8]],4],[5,[[9,9],0]]]
+[6,[[[6,2],[5,6]],[[7,6],[4,7]]]]
+[[[6,[0,7]],[0,9]],[4,[9,[9,0]]]]
+[[[7,[6,4]],[3,[1,3]]],[[[5,5],1],9]]
+[[6,[[7,3],[3,2]]],[[[3,8],[5,7]],4]]
+[[[[5,4],[7,7]],8],[[8,3],8]]
+[[9,3],[[9,9],[6,[4,9]]]]
+[[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]
+[[[[5,2],5],[8,[3,7]]],[[5,[7,5]],[4,4]]]""".split("\n").toList
+
+val input = fromFile
+
+// val input = example
+
+val data = input
+  .map(parsePair)
+
+data.reduceLeft((a, b) => reduce(Pair(a, b))).render
+data.reduceLeft((a, b) => reduce(Pair(a, b))).magnitude
+
+(data, data)
+  .tupled
+  .filterNot { case (a, b) => a == b }
+  .map { case (a, b) => reduce(Pair(a, b)).magnitude }
+  .max

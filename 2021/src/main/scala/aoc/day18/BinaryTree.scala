@@ -3,45 +3,21 @@ package aoc.day18
 import cats.data.Chain
 import cats.implicits._
 import cats.kernel.Semigroup
+import monocle.Lens
+import monocle.Optional
 
 sealed trait BinaryTree[A] {
 
-  def render: String =
-    this match {
-      case Leaf(n)        => n.toString()
-      case Pair(lhs, rhs) => s"[${lhs.render},${rhs.render}]"
-    }
+  def render: String = fold(_.toString)((l, r) => s"[$l,$r]")
 
-  def down(dir: Direction): BinaryTree[A] =
-    this match {
-      case Leaf(n)        => sys.error("can't go down on number")
-      case p @ Pair(_, _) => p.select(dir)
-    }
+  def down(dir: Direction): BinaryTree[A] = BinaryTree.down(dir).get(this)
 
-  def getAt(path: Chain[Direction]): BinaryTree[A] = path.toList.foldLeft(this)(_.down(_))
+  def getAt(path: Chain[Direction]): BinaryTree[A] = BinaryTree.at(path).get(this)
 
-  def replaceAt(path: Chain[Direction], newValue: BinaryTree[A]): BinaryTree[A] = {
-    def go(rest: List[Direction], self: BinaryTree[A]): BinaryTree[A] =
-      rest match {
-        case Nil      => sys.error("unsupported (replace whole tree)")
-        case h :: Nil => self.downReplace(h, newValue)
-        case h :: more =>
-          self.downReplace(
-            // replace at this direction
-            h,
-            // use remainder on path, element is the current element at the direction
-            go(more, self.down(h)),
-          )
-      }
-
-    go(path.toList, this)
-  }
-
-  def downReplace(dir: Direction, newValue: BinaryTree[A]): BinaryTree[A] =
-    this match {
-      case Leaf(n)        => sys.error("can't go down on number")
-      case p @ Pair(_, _) => p.insertAt(dir, newValue)
-    }
+  def replaceAt(
+    path: Chain[Direction],
+    newValue: BinaryTree[A],
+  ): BinaryTree[A] = BinaryTree.at(path).replace(newValue)(this)
 
   def collectFirst[B](
     withNode: WithPath[BinaryTree[A]] => Option[B],
@@ -95,18 +71,25 @@ sealed trait BinaryTree[A] {
       case Pair(lhs, rhs) => pair(lhs.fold(number)(pair), rhs.fold(number)(pair))
     }
 
-  def findNext(
+}
+
+object BinaryTree {
+
+  def next[A](
     self: WithPath[BinaryTree[A]],
     direction: Direction,
-  ): Option[WithPath[A]] =
-    // we wanna go left - drop everything including the first Right (from the end), reverse again and add Left
-    self.path.toList.reverse.dropWhile(_ == direction) match {
-      case _ :: t =>
-        val newPath = Chain
-          .fromSeq(t.reverse)
-          .append(direction)
+  ): Optional[BinaryTree[A], WithPath[A]] = {
 
-        WithPath(newPath, this.getAt(newPath))
+    // we wanna go left - drop everything including the first Right (from the end), reverse again and add Left
+    val newPathPrefix =
+      self.path.toList.reverse.dropWhile(_ == direction) match {
+        case _ :: t => Chain.fromSeq(t.reverse).append(direction).some
+        case _      => None
+      }
+
+    Optional[BinaryTree[A], WithPath[A]] { root =>
+      newPathPrefix.flatMap { case newPath =>
+        WithPath(newPath, root.getAt(newPath))
           .flatTraverse { nextBranch =>
             direction match {
               case Left  => nextBranch.collectLast(_.traverse(_.asLeaf))
@@ -114,8 +97,24 @@ sealed trait BinaryTree[A] {
             }
           }
           .map(_.map(_.n))
-      case _ => None
+      }
+    }(next => _.replaceAt(next.path, Leaf(next.content)))
+  }
+
+  def down[A](direction: Direction): Lens[BinaryTree[A], BinaryTree[A]] =
+    Lens[BinaryTree[A], BinaryTree[A]] {
+      case Leaf(n)        => sys.error("can't go down on number")
+      case p @ Pair(_, _) => p.select(direction)
+    } { newValue =>
+      {
+        case Leaf(n)        => sys.error("can't go down on number")
+        case p @ Pair(_, _) => p.insertAt(direction, newValue)
+      }
     }
+
+  def at[A](
+    path: Chain[Direction]
+  ): Lens[BinaryTree[A], BinaryTree[A]] = path.map(down[A]).toList.reduceLeft(_ andThen _)
 
 }
 

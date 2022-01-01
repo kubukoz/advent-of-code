@@ -8,17 +8,13 @@ object Day18 extends App {
   object Snailfish {
 
     def replaceNextIn(it: WithPath[RawPair[Int]], direction: Direction): Snailfish => Snailfish =
-      root =>
-        root
-          .findNext(it.map(_.asTree), direction)
-          .fold(root) { neighbor =>
-            root
-              .replaceAt(neighbor.path, Leaf(neighbor.content + it.content.select(direction)))
-          }
+      BinaryTree
+        .next[Int](it.map(_.asTree), direction)
+        .modify(_.map(_ + it.content.select(direction)))
 
     def rawExplode(
       it: WithPath[RawPair[Int]]
-    ): Snailfish => Snailfish = _.replaceAt(it.path, Leaf(0))
+    ): Snailfish => Snailfish = BinaryTree.at(it.path).replace(Leaf(0))
 
     def tryExplode(root: Snailfish): Option[Snailfish] = root
       .collectFirst { self =>

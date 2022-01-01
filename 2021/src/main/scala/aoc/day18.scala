@@ -164,10 +164,8 @@ object Day18 extends App {
   }
 
   def parseFull[F[_]: Parser: Defer](
-    path: Chain[Direction]
-  )(
     implicit F: MonadError[F, Throwable]
-  ): F[Snailfish] = Defer[F].defer {
+  ): F[Snailfish] = Defer[F].fix { self =>
     val api = Parser[F]
     import api._
 
@@ -189,8 +187,8 @@ object Day18 extends App {
 
     val pair: F[Snailfish] =
       (
-        const('[') *> parseFull(path.append(Left)) <* const(','),
-        parseFull(path.append(Right)) <* const(']'),
+        const('[') *> self <* const(','),
+        self <* const(']'),
       ).mapN(Pair.apply)
 
     number.orElse(pair)
@@ -212,7 +210,7 @@ object Day18 extends App {
   def parsePair(
     s: String
   ): Snailfish =
-    parseFull[StateT[EitherT[Eval, Throwable, *], (String, Int), *]](Chain.nil)
+    parseFull[StateT[EitherT[Eval, Throwable, *], (String, Int), *]]
       .runA((s, 0))
       .value
       .value
@@ -223,33 +221,29 @@ object Day18 extends App {
     root: Snailfish,
     self: WithPath[Snailfish],
     direction: Direction,
-  ): Option[WithPath[Snailfish]] =
+  ): Option[WithPath[Number[Int]]] =
     // we wanna go left - drop everything including the first Right (from the end), reverse again and add Left
     self.path.toList.reverse.dropWhile(_ == direction) match {
       case _ :: t =>
         val newPath = Chain
           .fromSeq(t.reverse)
           .append(direction)
-        WithPath(newPath, root.getAt(newPath)).some
+
+        WithPath(newPath, root.getAt(newPath)).flatTraverse { nextBranch =>
+          direction match {
+            case Left  => nextBranch.collectLast(_.traverse(_.asLeaf))
+            case Right => nextBranch.collectFirst(_.traverse(_.asLeaf))
+          }
+        }
       case _ => None
     }
 
-  def replaceLeft(it: WithPath[RawPair[Int]]): Snailfish => Snailfish =
+  def replaceNextIn(it: WithPath[RawPair[Int]], direction: Direction): Snailfish => Snailfish =
     root =>
-      findNext(root, it.map(_.asTree), Left)
-        .flatMap(_.flatTraverse(_.collectLast(_.traverse(_.asLeaf))))
-        .fold(root) { nb =>
+      findNext(root, it.map(_.asTree), direction)
+        .fold(root) { neighbor =>
           root
-            .replaceAt(nb.path, Number(nb.content.n + it.content.left.n))
-        }
-
-  def replaceRight(it: WithPath[RawPair[Int]]): Snailfish => Snailfish =
-    root =>
-      findNext(root, it.map(_.asTree), Right)
-        .flatMap(_.flatTraverse(_.collectFirst(_.traverse(_.asLeaf))))
-        .fold(root) { na =>
-          root
-            .replaceAt(na.path, Number(na.content.n + it.content.right.n))
+            .replaceAt(neighbor.path, Number(neighbor.content.n + it.content.select(direction).n))
         }
 
   def rawExplode(
@@ -261,8 +255,8 @@ object Day18 extends App {
       self.traverse(_.asRawPair.filter(_ => self.path.size >= 4))
     }
     .map { it =>
-      replaceLeft(it)
-        .andThen(replaceRight(it))
+      replaceNextIn(it, Left)
+        .andThen(replaceNextIn(it, Right))
         .andThen(rawExplode(it))
         .apply(root)
     }

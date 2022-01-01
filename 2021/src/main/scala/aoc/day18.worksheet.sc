@@ -231,16 +231,6 @@ def parsePair(
     .toTry
     .get
 
-val data = fromFile.map(parsePair)
-
-// val root = parsePair("[[[[[9,8],1],2],3],4]")
-val root = parsePair("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]")
-
-val it =
-  root.collectFirst { self =>
-    self.traverse(_.asRawPair.filter(_ => self.path.size >= 4))
-  }.get
-
 def findNext(
   root: Snailfish,
   self: WithPath[Snailfish],
@@ -256,31 +246,43 @@ def findNext(
     case _ => None
   }
 
-it
+val data = fromFile.map(parsePair)
 
-it.content.left.n
-it.content.right.n
-it.path.toList
+// val root = parsePair("[[[[[9,8],1],2],3],4]")
+val root = parsePair("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]")
 
-val nextBefore =
-  findNext(root, it.map(_.asTree), Left)
-    .map(_.flatMap(_.collectLast(_.traverse(_.asLeaf)).get))
-    .get
+val it =
+  root.collectFirst { self =>
+    self.traverse(_.asRawPair.filter(_ => self.path.size >= 4))
+  }.get
 
-val afterLeftReplace = root
-  .replaceAt(nextBefore.path, Number(nextBefore.content.n + it.content.left.n))
+def tryExplode(root: Snailfish): Option[Snailfish] = root
+  .collectFirst { self =>
+    self.traverse(_.asRawPair.filter(_ => self.path.size >= 4))
+  }
+  .map { it =>
+    val nextBefore =
+      findNext(root, it.map(_.asTree), Left)
+        .map(_.flatMap(_.collectLast(_.traverse(_.asLeaf)).get))
+        .get
 
-val nextAfter =
-  findNext(root, it.map(_.asTree), Right)
-    .map(_.flatMap(_.collectFirst(_.traverse(_.asLeaf)).get))
-    .get
+    val afterLeftReplace = root
+      .replaceAt(nextBefore.path, Number(nextBefore.content.n + it.content.left.n))
 
-val afterRightReplace = afterLeftReplace
-  .replaceAt(nextAfter.path, Number(nextAfter.content.n + it.content.right.n))
+    val nextAfter =
+      findNext(root, it.map(_.asTree), Right)
+        .map(_.flatMap(_.collectFirst(_.traverse(_.asLeaf)).get))
+        .get
 
-val afterAllReplacements = afterRightReplace
-  .replaceAt(it.path, Number(0))
+    val afterRightReplace = afterLeftReplace
+      .replaceAt(nextAfter.path, Number(nextAfter.content.n + it.content.right.n))
+
+    val afterAllReplacements = afterRightReplace
+      .replaceAt(it.path, Number(0))
+
+    afterAllReplacements
+  }
 
 root.render
-afterRightReplace.render
-afterAllReplacements.render == "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]"
+
+tryExplode(root).get.render == "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]"

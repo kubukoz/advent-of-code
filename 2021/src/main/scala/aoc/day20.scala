@@ -123,8 +123,8 @@ object Day20 extends App {
   locally {
     val (algorithm, data) = parse(readAll("day20-example.txt"))
 
-    assertEquals(run(data, algorithm, 2).data.size, 35, "Part 1")
-    assertEquals(run(data, algorithm, 50).data.size, 3351, "Part 2")
+    assertEquals(run(data, algorithm, 2).data.size, 35, "Part 1 example")
+    assertEquals(run(data, algorithm, 50).data.size, 3351, "Part 2 example")
   }
   locally {
     val (algorithm, data) = parse(readAll("day20.txt"))

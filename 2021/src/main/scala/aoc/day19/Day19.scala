@@ -3,6 +3,9 @@ package aoc.day19
 import aoc.lib._
 import cats.implicits._
 
+import scala.annotation.tailrec
+import scala.collection.mutable
+
 object Day19 extends App {
 
   def parseScanner(text: String) =
@@ -15,31 +18,52 @@ object Day19 extends App {
             .split("\n")
             .map { case s"$x,$y,$z" => Position(x.toInt, y.toInt, z.toInt) }
             .toList,
+          Position.init,
         )
     }
 
   def parse(text: String) = text.split("\n\n").map(parseScanner).toList
 
-  def resolveOverlap(s1: ScannerDescriptor, s2: ScannerDescriptor) = s1
-    .relative
-    .collectFirstSome { case (d1, group1) =>
-      s2
-        .permute
-        .flatMap(_.relative)
-        .collectFirst {
-          case (d2, group2) if (group1.positions.intersect(group2.positions)).sizeIs >= 12 =>
-            (group1, group2)
+  def areMatching(
+    s1: ScannerDescriptor,
+    s2: ScannerDescriptor,
+  ) = s1.positions.intersect(s2.positions).sizeIs >= 12
+
+  // Pairs of scanners' IDs that have already been proven to have insufficient overlap
+  // For my input this goes up to 364 in size, so it fills up pretty fast. Speedup is ~10x
+  private val mismatches: mutable.Set[(String, String)] = mutable.Set.empty
+
+  def resolveOverlap(s1: ScannerDescriptor, s2: ScannerDescriptor) =
+    if (mismatches.contains((s1.id, s2.id)))
+      None
+    else {
+      val result = s1
+        .relative
+        .collectFirstSome { group1 =>
+          s2
+            .permute
+            .to(LazyList)
+            .flatMap(_.relative)
+            .collectFirst {
+              case group2 if areMatching(group1, group2) => (group1, group2)
+            }
         }
+
+      if (result.isEmpty)
+        mismatches.add((s1.id, s2.id))
+
+      result
     }
 
   def resolve(
     scanners: List[ScannerDescriptor]
   ): List[ScannerDescriptor] = {
+    @tailrec
     def go(
       remaining: Map[String, ScannerDescriptor],
       resolved: List[ScannerDescriptor],
     ): List[ScannerDescriptor] = {
-      println("remaining: " + remaining.size)
+      println("remaining: " + remaining.size + ", cache size " + mismatches.size)
       if (remaining.isEmpty)
         resolved
       else {
@@ -52,6 +76,7 @@ object Day19 extends App {
                 resolveOverlap(seek, current)
                   .map { case (seekMoved, found) =>
                     // The movement of `seek` while resolving the overlap.
+                    // This can probably be retrieved from `seekMoved` now instead of recalculating.
                     val movement = seekMoved.positions.head |-| seek.positions.head
 
                     found.relativeTo(movement)
@@ -78,5 +103,17 @@ object Day19 extends App {
 
   val input = parse(readAll("day19.txt"))
 
-  println(resolve(input).foldMap(_.positions.toSet).size)
+  val resolved = resolve(input)
+  val part1 = resolved.foldMap(_.positions.toSet).size
+
+  val part2 =
+    resolve(input)
+      .map(_.movement)
+      .combinations(2)
+      .map {
+        case a :: b :: Nil => a.distance(b)
+        case _             => sys.error("impossible")
+      }
+      .max
+
 }

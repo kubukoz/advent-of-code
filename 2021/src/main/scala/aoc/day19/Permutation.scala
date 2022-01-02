@@ -3,12 +3,24 @@ package aoc.day19
 import cats.implicits._
 import cats.kernel.CommutativeGroup
 import cats.kernel.Monoid
+import cats.kernel.Order
 
-case class Position(x: Int, y: Int, z: Int)
+case class Position(x: Int, y: Int, z: Int) {
+
+  def distance(another: Position): Int = List(
+    x - another.x,
+    y - another.y,
+    z - another.z,
+  ).foldMap(_.abs)
+
+}
 
 object Position {
+  implicit val ord: Order[Position] = Order.by(p => (p.x, p.y, p.z))
   implicit val group: CommutativeGroup[Position] =
     CommutativeGroup[(Int, Int, Int)].imap(apply.tupled)(pos => (pos.x, pos.y, pos.z))
+
+  val init = group.empty
 }
 
 sealed trait AxisKind

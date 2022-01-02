@@ -41,8 +41,6 @@ object Day20 extends App {
   case class Image(data: Map[Position, Boolean]) {
     def dropAbsent = copy(data = data.filter { case (_, v) => v })
 
-    def trim(bounds: Bounds) = copy(data = data.filter { case (pos, _) => bounds.contains(pos) })
-
     def bounds: Bounds = {
       val xs = data.keySet.map(_.x)
       val ys = data.keySet.map(_.y)
@@ -120,7 +118,6 @@ object Day20 extends App {
         val default = algorithm.head && i % 2 == 0
         newImage(data, base.bounds.expandN(i), algorithm, default = default)
       }
-      .trim(base.bounds.expandN(totalRounds))
       .dropAbsent
 
   locally {

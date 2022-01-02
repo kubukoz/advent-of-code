@@ -1,8 +1,9 @@
 package aoc
 
-import scala.io.Source
-import scala.concurrent.duration._
+import cats.implicits._
 
+import scala.concurrent.duration._
+import scala.io.Source
 import scala.util.Using
 
 object lib {
@@ -18,7 +19,7 @@ object lib {
     description: String,
     showResult: Boolean = true,
   ): Unit = {
-    val (result, td) = timed(actual)
+    val (result, td) = timed(actual).map(_.toMillis)
 
     if (result != expected)
       Console

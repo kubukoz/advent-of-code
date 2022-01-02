@@ -27,7 +27,26 @@ object Day19 extends App {
   def areMatching(
     s1: ScannerDescriptor,
     s2: ScannerDescriptor,
-  ) = s1.positions.intersect(s2.positions).sizeIs >= 12
+  ) = {
+    // small optimization to stop counting overlap after 12 elements. ~13% improvement over naive .intersect.sizeIs >=12
+    var seen: Int = 0
+    val unseen: mutable.Set[Position] = s2.positions.to(mutable.HashSet)
+
+    @tailrec
+    def go(remS1: List[Position]): Boolean =
+      remS1 match {
+        case _ if seen >= 12     => true
+        case _ if unseen.isEmpty => false
+        case Nil                 => false
+        case head :: next =>
+          if (unseen(head))
+            seen += 1
+          unseen.remove(head)
+          go(next)
+      }
+
+    go(s1.positions)
+  }
 
   // Pairs of scanners' IDs that have already been proven to have insufficient overlap
   // For my input this goes up to 364 in size, so it fills up pretty fast. Speedup is ~10x
@@ -103,11 +122,14 @@ object Day19 extends App {
 
   val input = parse(readAll("day19.txt"))
 
-  val resolved = resolve(input)
+  val (resolved, fd) = timed(resolve(input))
+  println(fd.toMillis)
   val part1 = resolved.foldMap(_.positions.toSet).size
 
+  assertEquals(part1, 408, "Part 1")
+
   val part2 =
-    resolve(input)
+    resolved
       .map(_.movement)
       .combinations(2)
       .map {
@@ -115,5 +137,7 @@ object Day19 extends App {
         case _             => sys.error("impossible")
       }
       .max
+
+  assertEquals(part2, 13348, "Part 2")
 
 }

@@ -18,10 +18,7 @@ object lib {
     description: String,
     showResult: Boolean = true,
   ): Unit = {
-    val start = System.nanoTime()
-    val result = actual
-    val end = System.nanoTime()
-    val td = (end - start).nanos.toMillis
+    val (result, td) = timed(actual)
 
     if (result != expected)
       Console
@@ -41,6 +38,17 @@ object lib {
         s"${Console.GREEN}Assertion passed ($description)$resultString (${td}ms)${Console.RESET}"
       )
     }
+  }
+
+  def timed[A](
+    f: => A
+  ): (A, FiniteDuration) = {
+    val start = System.nanoTime()
+    val result = f
+    val end = System.nanoTime()
+    val td = (end - start).nanos
+
+    (result, td)
   }
 
 }

@@ -1,14 +1,15 @@
 package aoc.day19
 
-import cats.tests.CatsSuite
-import cats.kernel.laws.MonoidLaws
 import aoc.day19.Permutation
+import cats.kernel.Eq
 import cats.kernel.laws.discipline.MonoidTests
+import cats.tests.CatsSuite
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen
-import cats.kernel.Eq
+import org.scalatest.matchers.should.Matchers
+import cats.kernel.laws.discipline.CommutativeGroupTests
 
-class Day19Tests extends CatsSuite {
+class Day19Tests extends CatsSuite with Matchers {
 
   implicit val arbAxisKind: Arbitrary[AxisKind] = Arbitrary(
     Gen.oneOf(AxisKind.X, AxisKind.Y, AxisKind.Z)
@@ -22,5 +23,15 @@ class Day19Tests extends CatsSuite {
 
   implicit val eqPermutation: Eq[Permutation] = Eq.fromUniversalEquals
 
+  implicit val arbPosition: Arbitrary[Position] = Arbitrary(Gen.resultOf(Position.apply))
+  implicit val eqPosition: Eq[Position] = Eq.fromUniversalEquals
+
   checkAll("Monoid[Permutation]", MonoidTests[Permutation].monoid)
+
+  checkAll("CommutativeGroup[Position]", CommutativeGroupTests[Position].commutativeGroup)
+  test("Permutation.id is identity") {
+    forAll { pos: Position =>
+      Permutation.id.compile(pos) shouldBe pos
+    }
+  }
 }

@@ -1,9 +1,15 @@
 package aoc.day19
 
 import cats.implicits._
+import cats.kernel.CommutativeGroup
 import cats.kernel.Monoid
 
 case class Position(x: Int, y: Int, z: Int)
+
+object Position {
+  implicit val group: CommutativeGroup[Position] =
+    CommutativeGroup[(Int, Int, Int)].imap(apply.tupled)(pos => (pos.x, pos.y, pos.z))
+}
 
 sealed trait AxisKind
 

@@ -19,7 +19,7 @@ object Day17 extends App {
 
   object Position {
     implicit val monoid: Monoid[Position] =
-      Monoid[(Int, Int)].imap((apply _).tupled)(pos => (pos.x, pos.y))
+      Monoid[(Int, Int)].imap(apply.tupled)(pos => (pos.x, pos.y))
 
     val init = Position(0, 0)
   }
@@ -28,7 +28,7 @@ object Day17 extends App {
 
   object State {
     implicit val monoid: Monoid[State] =
-      Monoid[(Position, Position)].imap((apply _).tupled)(s => (s.position, s.velocity))
+      Monoid[(Position, Position)].imap(apply.tupled)(s => (s.position, s.velocity))
   }
 
   def performStep(state: State): State =

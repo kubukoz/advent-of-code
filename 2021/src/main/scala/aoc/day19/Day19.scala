@@ -30,18 +30,18 @@ object Day19 extends App {
   ) = {
     // small optimization to stop counting overlap after 12 elements. ~13% improvement over naive .intersect.sizeIs >=12
     var seen: Int = 0
-    val unseen: mutable.Set[Position] = s2.positions.to(mutable.HashSet)
+    val candidates: mutable.Set[Position] = s2.positions.to(mutable.HashSet)
 
     @tailrec
     def go(remS1: List[Position]): Boolean =
       remS1 match {
-        case _ if seen >= 12     => true
-        case _ if unseen.isEmpty => false
-        case Nil                 => false
+        case _ if seen >= 12         => true
+        case _ if candidates.isEmpty => false
+        case Nil                     => false
         case head :: next =>
-          if (unseen(head))
+          if (candidates(head))
             seen += 1
-          unseen.remove(head)
+          candidates.remove(head)
           go(next)
       }
 

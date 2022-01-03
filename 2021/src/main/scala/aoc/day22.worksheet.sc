@@ -20,20 +20,24 @@ sealed trait Range {
 
   def size: Long =
     this match {
-      case Empty               => 0L
-      case Bounds(xs, ys, zs)  => List(xs, ys, zs).map(r => (r.from to r.to).size.toLong).product
-      case Union(l, r)         => l.size + r.size - l.intersect(r).size
-      case Intersect(Empty, _) => 0L
-      case Intersect(l: Bounds, r)   => l.intersectWithBounds(r).fold(0L)(_.size)
-      case Intersect(Union(a, b), c) =>
-        // size of (a ^ c) v (a ^ b) - distributivity
-        a.intersect(c).size + b.intersect(c).size -
-          a.intersect(b).intersect(c).size
-      case Intersect(Intersect(a, b), c) =>
-        // effectively a.intersect(b.intersect(c)) - associativity
-        b.intersectWithBounds(c).fold(0L)(a.intersect(_).size)
-      case Intersect(Subtract(a, b), c) => a.intersect(c).size - a.intersect(b).intersect(c).size
-      case Subtract(a, b)               => a.size - a.intersect(b).size
+      case Empty              => 0L
+      case Bounds(xs, ys, zs) => List(xs, ys, zs).map(r => (r.from to r.to).size.toLong).product
+      case Union(l, r)        => l.size + r.size - l.intersect(r).size
+      case Subtract(a, b)     => a.size - a.intersect(b).size
+
+      case Intersect(lhs, bounds) =>
+        lhs match {
+          case Empty       => 0L
+          case l: Bounds   => l.intersectWithBounds(bounds).fold(0L)(_.size)
+          case Union(a, b) =>
+            // transform to (a ∩ c) ∪ (a ∩ b) - distributivity
+            a.intersect(bounds).size + b.intersect(bounds).size -
+              a.intersect(b).intersect(bounds).size
+          case Intersect(a, b) =>
+            // transform to a ∩ (b ∩ c) - associativity
+            b.intersectWithBounds(bounds).fold(0L)(a.intersect(_).size)
+          case Subtract(a, b) => a.intersect(bounds).size - a.intersect(b).intersect(bounds).size
+        }
     }
 
 }
@@ -121,7 +125,3 @@ val r =
     }
 // .intersect(part1Bounds)
     .size
-
-instructions.size
-
-2758514936282235L

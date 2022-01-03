@@ -103,8 +103,6 @@ def parse(s: List[String]) = s.map { case s"$onOff x=$xFrom..$xTo,y=$yFrom..$yTo
   )
 }
 
-val instructions = parse(readAllLines("day22.txt"))
-
 val part1Bounds = Bounds(
   BoxRange(-50, 50),
   BoxRange(-50, 50),
@@ -115,7 +113,7 @@ Empty.size
 
 part1Bounds.size
 
-val r =
+def runAll(instructions: List[Instruction]) =
   instructions
     .foldLeft(Empty: Range) { (range, ins) =>
       if (ins.on)
@@ -123,5 +121,21 @@ val r =
       else
         range.subtract(ins.bounds)
     }
-// .intersect(part1Bounds)
-    .size
+
+def part1(instructions: List[Instruction]) = runAll(instructions).intersect(part1Bounds).size
+
+def part2(instructions: List[Instruction]) = runAll(instructions).size
+
+locally {
+  val input = readAllLines("day22-example.txt")
+
+  assertEquals(part1(parse(input)), 474140L, "Part 1 example")
+  assertEquals(part2(parse(input)), 2758514936282235L, "Part 2 example")
+}
+
+locally {
+  val input = readAllLines("day22.txt")
+
+  assertEquals(part1(parse(input)), 603661L, "Part 1")
+  assertEquals(part2(parse(input)), 1237264238382479L, "Part 2")
+}

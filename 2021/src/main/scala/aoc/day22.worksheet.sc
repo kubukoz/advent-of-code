@@ -2,12 +2,60 @@ import aoc.lib._
 
 import cats.implicits._
 
-case class Position(x: Int, y: Int, z: Int)
+sealed trait Range {
 
-sealed trait Range
+  def intersect(another: Bounds): Range = Intersect(this, another)
 
-case class BoxRange(from: Int, to: Int) extends Range {
-  def toList: List[Int] = (from to to).toList
+  def subtract(another: Bounds): Range =
+    this match {
+      case Empty => Empty
+      case _     => Subtract(this, another)
+    }
+
+  def union(another: Bounds): Range =
+    this match {
+      case Empty => another
+      case _     => Union(this, another)
+    }
+
+  def size: Long =
+    this match {
+      case Empty               => 0L
+      case Bounds(xs, ys, zs)  => List(xs, ys, zs).map(r => (r.from to r.to).size.toLong).product
+      case Union(l, r)         => l.size + r.size - l.intersect(r).size
+      case Intersect(Empty, _) => 0L
+      case Intersect(l: Bounds, r)   => l.intersectWithBounds(r).fold(0L)(_.size)
+      case Intersect(Union(a, b), c) =>
+        // size of (a ^ c) v (a ^ b) - distributivity
+        a.intersect(c).size + b.intersect(c).size -
+          a.intersect(b).intersect(c).size
+      case Intersect(Intersect(a, b), c) =>
+        // effectively a.intersect(b.intersect(c)) - associativity
+        b.intersectWithBounds(c).fold(0L)(a.intersect(_).size)
+      case Intersect(Subtract(a, b), c) => a.intersect(c).size - a.intersect(b).intersect(c).size
+      case Subtract(a, b)               => a.size - a.intersect(b).size
+    }
+
+}
+
+case class Intersect(lhs: Range, rhs: Bounds) extends Range
+case class Subtract(lhs: Range, rhs: Bounds) extends Range
+case class Union(lhs: Range, rhs: Bounds) extends Range
+
+case class Bounds(xs: BoxRange, ys: BoxRange, zs: BoxRange) extends Range {
+
+  def intersectWithBounds(r: Bounds): Option[Bounds] =
+    (
+      xs.intersect(r.xs),
+      ys.intersect(r.ys),
+      zs.intersect(r.zs),
+    ).mapN(Bounds.apply)
+
+}
+
+case object Empty extends Range
+
+case class BoxRange(from: Int, to: Int) {
   def contains(point: Int): Boolean = point >= from && point <= to
 
   def intersect(another: BoxRange): Option[BoxRange] = {
@@ -36,18 +84,6 @@ object BoxRange {
   def fromStrings(from: String, to: String): BoxRange = BoxRange(from.toInt, to.toInt)
 }
 
-case class Bounds(xs: BoxRange, ys: BoxRange, zs: BoxRange) {
-
-  def intersect(another: Bounds): Option[Bounds] =
-    (
-      xs.intersect(another.xs),
-      ys.intersect(another.ys),
-      zs.intersect(another.zs),
-    ).mapN(Bounds.apply)
-
-  def toSet: Set[Position] = (xs.toList, ys.toList, zs.toList).mapN(Position.apply).toSet
-}
-
 case class Instruction(on: Boolean, bounds: Bounds)
 
 def parse(s: List[String]) = s.map { case s"$onOff x=$xFrom..$xTo,y=$yFrom..$yTo,z=$zFrom..$zTo" =>
@@ -71,17 +107,21 @@ val part1Bounds = Bounds(
   BoxRange(-50, 50),
 )
 
-val init: Set[Position] = Set.empty
+Empty.size
 
-// instructions
-//   .foldLeft(init) { (s, ins) =>
-//     val relevant = ins.bounds.intersect(part1Bounds).foldMap(_.toSet)
-//     if (ins.on)
-//       s ++ relevant
-//     else
-//       s -- relevant
+part1Bounds.size
 
-//   }
-//   .size
+val r =
+  instructions
+    .foldLeft(Empty: Range) { (range, ins) =>
+      if (ins.on)
+        range.union(ins.bounds)
+      else
+        range.subtract(ins.bounds)
+    }
+// .intersect(part1Bounds)
+    .size
 
 instructions.size
+
+2758514936282235L

@@ -3,3 +3,4 @@
 **/target
 result
 .DS_Store
+.vscode/

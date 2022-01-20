@@ -63,13 +63,15 @@ object Day23 extends App {
     0L,
   )
 
-  // val initState = State(
-  //   Set(
-  //     corridor(4) -> Pod('A')
-  //   ),
-  //   0L,
-  // )
-  val initState = initStateBase
+  val initState = State(
+    Set(
+      rooms(3) -> Pod('B'),
+      rooms(2) -> Pod('B'),
+      rooms(1) -> Pod('D'),
+    ),
+    0L,
+  )
+  // val initState = initStateBase
 
   case class State(pending: Set[(Node, Pod)], totalCost: Long) {
     def isFinished = pending.isEmpty
@@ -100,6 +102,16 @@ object Day23 extends App {
 
   var minCostSoFar = Long.MaxValue
 
+  /*
+  TODO: implement these
+
+  Amphipods will never move from the hallway into a room unless that room is their destination room and that room contains no amphipods which do not also have that room as their own destination.
+  If an amphipod's starting room is not its destination room, it can stay in that room until it leaves the room.
+  (For example, an Amber amphipod will not move from the hallway into the right three rooms, and will only move into the leftmost room if that room is empty or if it only contains other Amber amphipods.)
+
+  Once an amphipod stops moving in the hallway, it will stay in that spot until it can move into a room.
+  (That is, once any amphipod starts moving, any other amphipods currently in the hallway are locked in place and will not move again until they can move fully into a room.)
+   */
   def moveOnce(state: State): List[State] = {
     if (minCostSoFar < state.totalCost)
       Nil

@@ -1,10 +1,7 @@
 package aoc
 
-import cats.data.NonEmptyList
 import cats.implicits._
 
-import scala.annotation.tailrec
-import scala.collection.immutable
 import lib._
 
 object Day23 extends App {
@@ -55,17 +52,28 @@ object Day23 extends App {
   }
 
 //we parse to this
-  val initState = State(
-    Map(
-      rooms(0) -> NonEmptyList.of(Pod('B'), Pod('A')),
-      rooms(1) -> NonEmptyList.of(Pod('C'), Pod('D')),
-      rooms(2) -> NonEmptyList.of(Pod('B'), Pod('C')),
-      rooms(3) -> NonEmptyList.of(Pod('D'), Pod('A')),
+  val initStateBase = State(
+    Set(
+      rooms(0) -> Pod('B'),
+      rooms(1) -> Pod('C'),
+      rooms(1) -> Pod('D'),
+      rooms(2) -> Pod('B'),
+      rooms(3) -> Pod('A'),
     ),
     0L,
   )
 
-  case class NewState(pending: Map[Node, Pod], totalCost: Long)
+  // val initState = State(
+  //   Set(
+  //     corridor(4) -> Pod('A')
+  //   ),
+  //   0L,
+  // )
+  val initState = initStateBase
+
+  case class State(pending: Set[(Node, Pod)], totalCost: Long) {
+    def isFinished = pending.isEmpty
+  }
 
   sealed trait Moves extends Product with Serializable
 
@@ -90,26 +98,74 @@ object Day23 extends App {
       }
   }
 
-  case class State(pods: Map[Node, NonEmptyList[Pod]], cost: Long) {
-
-    def at(pos: Node): Char = ??? // pods.get(pos).fold('.')(_.name)
-
-    def isFinished: Boolean =
-      pods == Map(
-        rooms(0) -> NonEmptyList.of(Pod('A'), Pod('A')),
-        rooms(1) -> NonEmptyList.of(Pod('B'), Pod('B')),
-        rooms(2) -> NonEmptyList.of(Pod('C'), Pod('C')),
-        rooms(3) -> NonEmptyList.of(Pod('D'), Pod('D')),
-      )
-
-  }
-
   var minCostSoFar = Long.MaxValue
 
-// moveOnce(initState)
+  def moveOnce(state: State): List[State] = {
+    if (minCostSoFar < state.totalCost)
+      Nil
 
-  // println(recurse(initState, Nil))
+    state.pending.toList.flatMap { case (currentLoc, pod) =>
+      val result = movesForPod(pod, currentLoc, state.pending.map(_._1))
+
+      result match {
+        case Finished(distance) =>
+          state.copy(
+            pending = state.pending - ((currentLoc, pod)),
+            totalCost = state.totalCost + pod.multiplier * distance,
+          ) :: Nil
+        case ToCorridors(possibleTargets) =>
+          possibleTargets.map { case (target, distance) =>
+            state.copy(
+              pending = state.pending - ((currentLoc, pod)) + ((target, pod)),
+              totalCost = state.totalCost + pod.multiplier * distance,
+            )
+          }
+      }
+    }
+  }
+
+  object Done
+
+  case class Frame(current: State, history: Set[Set[(Node, Pod)]])
+
+  def shortestDistance(frame: Frame, memory: List[Frame]): Done.type =
+    if (frame.current.isFinished) {
+      val newCost = minCostSoFar min frame.current.totalCost
+
+      if (newCost < minCostSoFar)
+        println("new record! " + newCost)
+      minCostSoFar = newCost
+      memory match {
+        case Nil       => Done
+        case h :: more => shortestDistance(h, more)
+      }
+    } else {
+
+      moveOnce(frame.current).filterNot(it => frame.history.contains(it.pending)) match {
+        case Nil =>
+          memory match {
+            case Nil       => Done
+            case h :: more => shortestDistance(h, more)
+          }
+        case h :: more =>
+          val newChild = {
+            val base = frame.history + frame.current.pending
+
+            Frame(_, base)
+          }
+
+          shortestDistance(newChild(h), more.map(newChild) ++ memory)
+      }
+    }
+
+  println(shortestDistance(Frame(initState, Set.empty), Nil))
   println(minCostSoFar)
+
+  assertEquals(
+    moveOnce(initState).size,
+    10,
+    "10 moves initially",
+  )
 
   assertEquals(
     movesForPod(Pod('B'), rooms(0), Set.empty),

@@ -26,6 +26,10 @@ object Day23 extends App {
       }
       .toList
 
+  case class Edge(from: Node, to: Node, dist: Int) {
+    def flip = Edge(to, from, dist)
+  }
+
   val edges = List(
     corridor(1) -> 1 -> corridor(0),
     corridor(1) -> 2 -> rooms(0),
@@ -41,12 +45,10 @@ object Day23 extends App {
     corridor(4) -> 2 -> corridor(5),
     corridor(5) -> 2 -> rooms(3),
     corridor(5) -> 1 -> corridor(6),
-  )
+  ).map { case ((from, dist), to) => Edge(from, to, dist) }
 
-  def neighbors(node: Node): List[(Int, Node)] = edges.collect {
-    case ((from, dist), to) if from == node => (dist, to)
-    case ((from, dist), to) if to == node   => (dist, from)
-  }
+  val edgesFrom: Map[Node, List[Edge]] =
+    edges.groupBy(_.from) |+| edges.groupBy(_.to).map(_.map(_.map(_.flip)))
 
   case class Pod(name: Char) {
     def multiplier = Map('A' -> 1, 'B' -> 10, 'C' -> 100, 'D' -> 1000)(name)
@@ -63,6 +65,31 @@ object Day23 extends App {
     0L,
   )
 
+  case class NewState(pending: Map[Node, Pod], totalCost: Long)
+
+  sealed trait Moves extends Product with Serializable
+
+  case class Finished(distance: Int) extends Moves
+  case class ToCorridors(possibleTargets: Map[Corridor, Int]) extends Moves
+  import util.chaining._
+
+  def movesForPod(pod: Pod, loc: Node, usedNodes: Set[Node]): Moves = {
+
+    val neighs = edgesFrom(loc)
+
+    neighs
+      .collectFirst {
+        case Edge(_, target @ Room(_), dist) if target.letter == pod.name => Finished(dist)
+      }
+      .getOrElse {
+        neighs
+          .collect { case Edge(_, target @ Corridor(_), dist) => (target, dist) }
+          .filter { case (target, _) => !usedNodes(target) }
+          .toMap
+          .pipe(ToCorridors(_))
+      }
+  }
+
   case class State(pods: Map[Node, NonEmptyList[Pod]], cost: Long) {
 
     def at(pos: Node): Char = ??? // pods.get(pos).fold('.')(_.name)
@@ -75,114 +102,9 @@ object Day23 extends App {
         rooms(3) -> NonEmptyList.of(Pod('D'), Pod('D')),
       )
 
-    def render: String = List(
-      "#" * 13,
-      "#"
-        + at(corridor(0))
-        + at(corridor(1))
-        + '.'
-        + at(corridor(2))
-        + '.'
-        + at(corridor(3))
-        + '.'
-        + at(corridor(4))
-        + '.'
-        + at(corridor(5))
-        + at(corridor(6))
-        + '#',
-      "###"
-        + at(rooms(0))
-        + '#'
-        + at(rooms(2))
-        + '#'
-        + at(rooms(4))
-        + '#'
-        + at(rooms(6))
-        + "###",
-      "  #"
-        + at(rooms(1))
-        + '#'
-        + at(rooms(3))
-        + '#'
-        + at(rooms(5))
-        + '#'
-        + at(rooms(7))
-        + "#  ",
-      "  #########  ",
-      "",
-    ).mkString("\n")
-
   }
-
-  def movesForPod(pod: Pod, loc: Node, positions: Map[Node, NonEmptyList[Pod]]) = {
-    loc match {
-      case r @ Room(_) => r.letter != pod.name
-      case _           => true
-    }
-  }.guard[List]
-    .as(pod)
-    .flatMap { pod =>
-      def newEntry(currentContents: NonEmptyList[Pod]): Option[NonEmptyList[Pod]] =
-        currentContents.filterNot(_ == pod).toNel
-
-      neighbors(loc)
-        .filter {
-          // todo: if the target position is a room, we only check if it's the right color.
-          case (_, target @ Room(_)) => target.letter == pod.name
-          // If it's a corridor, we check that it's empty
-          case (_, target @ Corridor(_)) => positions.get(target).isEmpty
-        }
-    }
-    .map(_.swap)
-    .toMap
-
-  def moveOnce(
-    state: State
-  ): immutable.Iterable[State] =
-    if (state.cost > minCostSoFar)
-      Nil
-    else
-      state
-        .pods
-        .toList
-        .flatMap { case (loc, pods) =>
-          pods.toList.flatMap { pod =>
-            def newEntry(currentContents: NonEmptyList[Pod]): Option[NonEmptyList[Pod]] =
-              currentContents.filterNot(_ == pod).toNel
-
-            val otherPods = state.copy(pods = state.pods - loc ++ newEntry(pods).tupleLeft(loc))
-
-            movesForPod(pod, loc, state.pods)
-              .map { case (nextLoc, dist) =>
-                otherPods.copy(
-                  pods = otherPods.pods |+| Map(nextLoc -> NonEmptyList.one(pod)),
-                  cost = state.cost + dist * pod.multiplier,
-                )
-
-              }
-          }
-        }
 
   var minCostSoFar = Long.MaxValue
-
-  @tailrec
-  final def recurse(state: State, remaining: List[State]): Long = {
-    val nextMoves = moveOnce(state)
-
-    println(state.cost)
-    if (nextMoves.isEmpty)
-      if (state.isFinished) {
-        println(minCostSoFar)
-        minCostSoFar = minCostSoFar min state.cost
-        state.cost
-      } else
-        Long.MaxValue
-    else {
-      val l = nextMoves.toList
-
-      recurse(l.head, l.tail ++ remaining)
-    }
-  }
 
 // moveOnce(initState)
 
@@ -190,38 +112,32 @@ object Day23 extends App {
   println(minCostSoFar)
 
   assertEquals(
-    movesForPod(Pod('A'), rooms(0), Map.empty),
-    Map(),
-    "No moves for pod in its right place",
-  )
-
-  assertEquals(
-    movesForPod(Pod('B'), rooms(0), Map.empty),
-    Map(corridor(1) -> 2, corridor(2) -> 2),
+    movesForPod(Pod('B'), rooms(0), Set.empty),
+    ToCorridors(Map(corridor(1) -> 2, corridor(2) -> 2)),
     "Yes moves for pod in the wrong room",
   )
 
   assertEquals(
-    movesForPod(Pod('B'), corridor(3), Map.empty),
-    Map(rooms(1) -> 2, corridor(2) -> 2, corridor(4) -> 2),
+    movesForPod(Pod('B'), corridor(3), Set.empty),
+    Finished(2),
     "Yes moves for pod in corridor next to its room",
   )
 
   assertEquals(
-    movesForPod(Pod('B'), corridor(5), Map.empty),
-    Map(corridor(4) -> 2, corridor(6) -> 1),
+    movesForPod(Pod('B'), corridor(5), Set.empty),
+    ToCorridors(Map(corridor(4) -> 2, corridor(6) -> 1)),
     "Yes moves for pod in corridor next to no useful room",
   )
 
   assertEquals(
-    movesForPod(Pod('B'), corridor(6), Map.empty),
-    Map(corridor(5) -> 1),
+    movesForPod(Pod('B'), corridor(6), Set.empty),
+    ToCorridors(Map(corridor(5) -> 1)),
     "Yes moves for pod in last corridor",
   )
 
   assertEquals(
-    movesForPod(Pod('B'), corridor(6), Map(corridor(5) -> NonEmptyList.of(Pod('C')))),
-    Map(),
+    movesForPod(Pod('B'), corridor(6), Set(corridor(5))),
+    ToCorridors(Map.empty),
     "No moves if corridor next to pod is taken",
   )
 

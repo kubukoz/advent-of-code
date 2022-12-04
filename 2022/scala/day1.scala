@@ -5,7 +5,7 @@ import Tuple.Map
 import scala.NonEmptyTuple
 
 object StringOps {
-  type IndexOfRec[Haystack <: String, Needle <: String, I <: Int] =
+  type IndexOfRec[Haystack <: String, Needle <: String, I <: Int] <: Int =
     ((I + Length[Needle]) > Length[Haystack]) match {
       case true => -1
       case false =>
@@ -18,7 +18,7 @@ object StringOps {
   type IndexOf[Haystack <: String, Needle <: String] =
     IndexOfRec[Haystack, Needle, 0]
 
-  type SplitRec[S <: String, Delim <: String, Memory <: Tuple] =
+  type SplitRec[S <: String, Delim <: String, Memory <: Tuple] <: Tuple =
     IndexOf[S, Delim] match {
       case -1 => TupleOps.Reverse[S *: Memory]
       case Int =>
@@ -32,7 +32,7 @@ object StringOps {
   type Split[S <: String, Delim <: String] =
     SplitRec[S, Delim, EmptyTuple]
 
-  type ParseDigit[Ch <: Char] = Ch match {
+  type ParseDigit[Ch <: Char] <: Int = Ch match {
     case '0' => 0
     case '1' => 1
     case '2' => 2
@@ -45,27 +45,30 @@ object StringOps {
     case '9' => 9
   }
 
-  type ToTuple[S <: String] = S match {
+  type ToTuple[S <: String] <: Tuple = S match {
     case "" => EmptyTuple
     case _  => (S CharAt 0) *: ToTuple[Substring[S, 1, Length[S]]]
   }
 
-  type ParseInt[S <: String] = ToTuple[S] match {
-    case Tuple =>
-      Tuple.Fold[
-        TupleOps.Reverse[ToTuple[S] Map ParseDigit],
-        0,
-        [A, B] =>> (A, B) match {
-          case (Int, Int) => A + (10 * B)
-        }
-      ]
-  }
+  type ParseInt[S <: String] =
+    Tuple.Fold[
+      TupleOps.Reverse[
+        ToTuple[S] Map
+          ([A] =>> A match {
+            case Char => ParseDigit[A]
+          })
+      ],
+      0,
+      [A, B] =>> (A, B) match {
+        case (Int, Int) => A + (10 * B)
+      }
+    ]
 }
 
 object TupleOps {
   import Tuple._
 
-  type Reverse[T <: Tuple] = T match {
+  type Reverse[T <: Tuple] <: Tuple = T match {
     case EmptyTuple => EmptyTuple
     case h *: t     => Tuple.Concat[Reverse[t], h *: EmptyTuple]
   }
@@ -91,23 +94,21 @@ object TupleOps {
     }
   ]
 
-  type IndexOfRec[T <: Tuple, Elem, I <: Int] = Tuple.Elem[T, I] match {
-    case Elem => I
-    case _    => IndexOfRec[T, Elem, I + 1]
-  }
+  type IndexOfRec[T <: Tuple, Elem, I <: Int] <: Int =
+    Tuple.Elem[T, I] match {
+      case Elem => I
+      case _    => IndexOfRec[T, Elem, I + 1]
+    }
 
   type IndexOf[T <: Tuple, Elem] = IndexOfRec[T, Elem, 0]
 
   type DropLargest[T <: NonEmptyTuple] =
-    T IndexOf Maximum[T] match {
-      case Int =>
-        (
-          (T Take (T IndexOf Maximum[T])) Concat
-            (T Drop ((T IndexOf Maximum[T]) + 1))
-        )
-    }
+    (
+      (T Take (T IndexOf Maximum[T])) Concat
+        (T Drop ((T IndexOf Maximum[T]) + 1))
+    )
 
-  type BubbleSort[T <: Tuple] = T match {
+  type BubbleSort[T <: Tuple] <: Tuple = T match {
     case EmptyTuple => EmptyTuple
     case NonEmptyTuple =>
       BubbleSort[DropLargest[T]] Concat (Maximum[T] *: EmptyTuple)

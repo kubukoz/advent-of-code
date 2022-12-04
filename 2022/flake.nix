@@ -7,8 +7,8 @@
     inherit self nixpkgs;
     shell = { pkgs }: pkgs.mkShell {
       packages = [
-        # iex
         pkgs.elixir
+        (pkgs.scala-cli.override { jre = pkgs.openjdk17; })
       ];
     };
   };

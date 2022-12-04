@@ -26,3 +26,5 @@ aoc2022-*.tar
 /tmp/
 
 input/
+
+**/.vscode/settings.json

@@ -32,46 +32,38 @@ func parse(input string) []Bank {
 	return banks
 }
 
-func part1(banks []Bank) int {
+func findBest(banks []Bank, joltagesPerBank int) int {
 	joltageSum := 0
 
 	for _, bank := range banks {
-		maxJoltage := 0
-
-		for firstIndex, firstBattery := range bank.batteries {
-			for _, secondBattery := range bank.batteries[firstIndex+1:] {
-				maxJoltage = max(
-					maxJoltage,
-					firstBattery.joltage*10+secondBattery.joltage,
-				)
-
-			}
-		}
-
-		joltageSum += maxJoltage
+		best := bestSequence(bank.batteries, joltagesPerBank, func(b Battery) int { return b.joltage })
+		slices.Reverse(best)
+		joltageSum += sumBatteries(best)
 	}
 
 	return joltageSum
-
 }
 
-func part2(banks []Bank) int {
-	joltageSum := 0
-
-	for _, bank := range banks {
-		maxJoltage := 0
-		sequences := subsequences(bank.batteries, []Battery{}, 12, func(b Battery) int { return b.joltage })
-
-		for _, sequence := range sequences {
-			maxJoltage = max(
-				maxJoltage,
-				sumBatteries(sequence),
-			)
-		}
-		joltageSum += maxJoltage
+func bestSequence[T any](choices []T, n int, compareBy func(T) int) []T {
+	if n == 0 {
+		return []T{}
 	}
 
-	return joltageSum
+	var maxValue T = choices[0]
+	var maxIndex int = 0
+
+	for i, v := range choices[:len(choices)-n+1] {
+		if compareBy(v) > compareBy(maxValue) {
+			maxValue = v
+			maxIndex = i
+		}
+	}
+
+	rest := bestSequence(choices[maxIndex+1:], n-1, compareBy)
+
+	rest = append(rest, maxValue)
+
+	return rest
 }
 
 func sumBatteries(bats []Battery) int {
@@ -85,49 +77,18 @@ func sumBatteries(bats []Battery) int {
 	return sum
 }
 
-// this doesn't actually work at all lmao
-// it's way too slow. But it's correct!
-func subsequences[T any](choices []T, prefix []T, n int, cmp func(T) int) [][]T {
-
-	if n == 0 {
-		return [][]T{prefix}
-	}
-	if n > len(choices) {
-		panic("not allowed")
-	}
-
-	var results [][]T
-
-	for i, current := range choices[:len(choices)-n+1] {
-
-		var candidates [][]T
-
-		newPrefix := make([]T, len(prefix)+1)
-		copy(newPrefix, prefix)
-		newPrefix[len(prefix)] = current
-
-		candidates = subsequences(
-			choices[i+1:],
-			newPrefix,
-			n-1,
-			cmp,
-		)
-
-		results = slices.Concat(results, candidates)
-	}
-
-	return results
+func part1(banks []Bank) int {
+	return findBest(banks, 2)
 }
 
-func intSubsequences(choices []int, n int) [][]int {
-	return subsequences(choices, []int{}, n, func(i int) int { return i })
+func part2(banks []Bank) int {
+	return findBest(banks, 12)
 }
 
 func main() {
-
 	var input string
-	input = "987654321111111\n811111111111119\n234234234234278\n818181911112111"
-	// input = readFile("input.txt")
+	// input = "987654321111111\n811111111111119\n234234234234278\n818181911112111"
+	input = readFile("input.txt")
 
 	banks := parse(input)
 

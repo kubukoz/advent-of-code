@@ -14,40 +14,64 @@ func main() {
 
 	lines := strings.Split(input, "\n")
 
+	fmt.Println(countRolls(lines, false))
+	fmt.Println(countRolls(lines, true))
+}
+
+func countRolls(lines []string, canRemove bool) int {
+
 	count := 0
-	for lineIndex, line := range lines {
-		for charIndex, char := range line {
-			neighborsFlashing := 0
+	keepRunning := true
 
-			if char != '@' {
-				continue
-			}
+	for {
+		if !keepRunning {
+			break
+		}
+		keepRunning = false
 
-			for dy := -1; dy <= 1; dy++ {
-				for dx := -1; dx <= 1; dx++ {
-					y := lineIndex + dy
-					x := charIndex + dx
+		for lineIndex := range lines {
+			for charIndex := range lines[lineIndex] {
+				neighborsFlashing := 0
 
-					if !(dx == 0 && dy == 0) && inRange(y, 0, len(lines)-1) && inRange(x, 0, len(line)-1) {
-						neighbor := lines[y][x]
-						if neighbor == '@' {
-							neighborsFlashing++
+				if lines[lineIndex][charIndex] != '@' {
+					continue
+				}
+
+				for dy := -1; dy <= 1; dy++ {
+					for dx := -1; dx <= 1; dx++ {
+						y := lineIndex + dy
+						x := charIndex + dx
+
+						if !(dx == 0 && dy == 0) &&
+							inRange(y, 0, len(lines)) &&
+							inRange(x, 0, len(lines[lineIndex])) {
+
+							if lines[y][x] == '@' {
+								neighborsFlashing++
+							}
 						}
+					}
+				}
+
+				if neighborsFlashing < 4 {
+					count++
+					if canRemove {
+						r := []rune(lines[lineIndex])
+						r[charIndex] = '.'
+						lines[lineIndex] = string(r)
+						keepRunning = true
 					}
 				}
 			}
 
-			if neighborsFlashing < 4 {
-				count++
-			}
 		}
 	}
 
-	fmt.Println(count)
+	return count
 }
 
-func inRange(number int, fromInc int, toInc int) bool {
-	return number >= fromInc && number <= toInc
+func inRange(number int, fromInc int, toExc int) bool {
+	return number >= fromInc && number < toExc
 }
 
 func readFile(name string) string {

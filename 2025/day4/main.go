@@ -23,10 +23,7 @@ func countRolls(lines []string, canRemove bool) int {
 	count := 0
 	keepRunning := true
 
-	for {
-		if !keepRunning {
-			break
-		}
+	for keepRunning {
 		keepRunning = false
 
 		for lineIndex := range lines {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -19,6 +20,7 @@ func main() {
 	ingredients := parseIngredients(strings.Split(parts[1], "\n"))
 
 	fmt.Printf("Part 1: %v\n", part1(ranges, ingredients))
+	fmt.Printf("Part 2: %v\n", part2(ranges))
 }
 
 func part1(ranges []Range, ingredients []int) int {
@@ -27,7 +29,7 @@ func part1(ranges []Range, ingredients []int) int {
 	for _, ingredient := range ingredients {
 		fresh := false
 		for _, r := range ranges {
-			if inRange(ingredient, r.fromInc, r.toInc) {
+			if r.fits(ingredient) {
 				fresh = true
 				break
 			}
@@ -41,8 +43,59 @@ func part1(ranges []Range, ingredients []int) int {
 	return count
 }
 
-func parseRanges(lines []string) []Range {
-	var ranges []Range
+func part2(ranges []Range) (count int) {
+	visitedRanges := mergeOverlapping(ranges)
+
+	for _, r := range visitedRanges {
+		count += r.size()
+	}
+
+	return count
+}
+
+func mergeOverlapping(ranges []Range) (visitedRanges []Range) {
+	for _, nextRange := range ranges {
+		overlappings, overlappingIndices := findOverlappings(visitedRanges, nextRange)
+
+		var combined Range
+		if len(overlappings) > 0 {
+			combined = joinRanges(overlappings)
+			combined = combined.join(nextRange)
+
+			slices.Reverse(overlappingIndices)
+			for _, i := range overlappingIndices {
+				visitedRanges = slices.Delete(visitedRanges, i, i+1)
+			}
+		} else {
+			combined = nextRange
+		}
+
+		visitedRanges = append(visitedRanges, combined)
+	}
+
+	return visitedRanges
+}
+
+func findOverlappings(visitedRanges []Range, nextRange Range) (overlappings []Range, overlappingIndices []int) {
+	for i, visitedRange := range visitedRanges {
+		if nextRange.overlaps(visitedRange) {
+			overlappings = append(overlappings, visitedRange)
+			overlappingIndices = append(overlappingIndices, i)
+		}
+	}
+	return overlappings, overlappingIndices
+}
+
+func joinRanges(ranges []Range) (combined Range) {
+	combined = ranges[0]
+
+	for _, r := range ranges[1:] {
+		combined = combined.join(r)
+	}
+	return combined
+}
+
+func parseRanges(lines []string) (ranges []Range) {
 
 	for _, line := range lines {
 		r := strings.Split(line, "-")
@@ -62,9 +115,7 @@ func parseRanges(lines []string) []Range {
 	return ranges
 }
 
-func parseIngredients(lines []string) []int {
-	var ingredients []int
-
+func parseIngredients(lines []string) (ingredients []int) {
 	for _, line := range lines {
 		i, err := strconv.Atoi(line)
 		if err != nil {
@@ -81,8 +132,24 @@ type Range struct {
 	toInc   int
 }
 
-func inRange(number int, fromInc int, toInc int) bool {
-	return number >= fromInc && number <= toInc
+func (r Range) fits(number int) bool {
+	return number >= r.fromInc && number <= r.toInc
+}
+
+func (r Range) size() int {
+	return r.toInc - r.fromInc + 1
+}
+
+func (r Range) overlaps(another Range) bool {
+	return r.fromInc <= another.toInc &&
+		r.toInc >= another.fromInc
+}
+
+func (r Range) join(another Range) Range {
+	return Range{
+		fromInc: min(r.fromInc, another.fromInc),
+		toInc:   max(r.toInc, another.toInc),
+	}
 }
 
 func readFile(name string) string {

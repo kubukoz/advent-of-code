@@ -62,10 +62,7 @@ func mergeOverlapping(ranges []Range) (visitedRanges []Range) {
 			combined = joinRanges(overlappings)
 			combined = combined.join(nextRange)
 
-			slices.Reverse(overlappingIndices)
-			for _, i := range overlappingIndices {
-				visitedRanges = slices.Delete(visitedRanges, i, i+1)
-			}
+			visitedRanges = removeIndices(overlappingIndices, visitedRanges)
 		} else {
 			combined = nextRange
 		}
@@ -74,6 +71,15 @@ func mergeOverlapping(ranges []Range) (visitedRanges []Range) {
 	}
 
 	return visitedRanges
+}
+
+func removeIndices(indicesOrdered []int, items []Range) []Range {
+	slices.Reverse(indicesOrdered)
+
+	for _, i := range indicesOrdered {
+		items = slices.Delete(items, i, i+1)
+	}
+	return items
 }
 
 func findOverlappings(visitedRanges []Range, nextRange Range) (overlappings []Range, overlappingIndices []int) {

@@ -11,10 +11,10 @@ func main() {
 	input := shared.ReadFile("sample.txt")
 	// input = shared.ReadFile("input.txt")
 
-	fmt.Printf("Part 1: %v\n", run(parse1(input)))
+	fmt.Printf("Part 1: %v\n", part1(parse1(input)))
 }
 
-func run(table Table) int {
+func part1(table Table) int {
 	sum := 0
 
 	for _, column := range table.columns {
@@ -22,6 +22,11 @@ func run(table Table) int {
 		value := column.initValue()
 
 		for _, number := range column.inputs {
+			number, err := strconv.Atoi(strings.TrimSpace(number))
+			if err != nil {
+				panic(err)
+			}
+
 			value = column.op(value, number)
 		}
 
@@ -33,29 +38,45 @@ func run(table Table) int {
 
 func parse1(text string) Table {
 	lines := strings.Split(text, "\n")
-	lastLine := strings.Fields(lines[len(lines)-1])
+
+	lastLine := lines[len(lines)-1]
+	operatorIndices := findOperators(lastLine)
 	rowLines := lines[:(len(lines) - 1)]
 
-	columns := make([]Column, len(lastLine))
+	columns := make([]Column, len(operatorIndices))
 
 	for _, line := range rowLines {
-		numbers := strings.Fields(line)
+		for columnIndex, startIndex := range operatorIndices {
+			isLast := columnIndex == len(operatorIndices)-1
 
-		for columnIndex, number := range numbers {
-			number, err := strconv.Atoi(number)
-			if err != nil {
-				panic(err)
+			var endIndex int
+			if isLast {
+				endIndex = len(line)
+			} else {
+				endIndex = operatorIndices[columnIndex+1] - 1
 			}
 
-			columns[columnIndex].inputs = append(columns[columnIndex].inputs, number)
+			word := line[startIndex:endIndex]
+
+			columns[columnIndex].inputs = append(columns[columnIndex].inputs, word)
 		}
 	}
 
-	for columnIndex, op := range lastLine {
-		columns[columnIndex].opChar = op[0]
+	for columnIndex, opIndex := range operatorIndices {
+		columns[columnIndex].opChar = lastLine[opIndex]
 	}
 
 	return Table{columns}
+}
+
+func findOperators(text string) (indices []int) {
+	for i, ch := range text {
+		if ch != ' ' {
+			indices = append(indices, i)
+		}
+	}
+
+	return
 }
 
 type Table struct {
@@ -63,7 +84,7 @@ type Table struct {
 }
 
 type Column struct {
-	inputs []int
+	inputs []string
 	opChar byte
 }
 

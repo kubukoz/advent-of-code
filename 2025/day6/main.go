@@ -9,20 +9,19 @@ import (
 
 func main() {
 	input := shared.ReadFile("sample.txt")
-	// input = shared.ReadFile("input.txt")
+	input = shared.ReadFile("input.txt")
 
-	fmt.Printf("Part 1: %v\n", part1(parse1(input)))
+	fmt.Printf("Part 1: %v\n", part1(parse(input)))
+	fmt.Printf("Part 2: %v\n", part1(transposeColumns(parse(input))))
 }
 
-func part1(table Table) int {
-	sum := 0
-
+func part1(table Table) (sum int) {
 	for _, column := range table.columns {
 
 		value := column.initValue()
 
-		for _, number := range column.inputs {
-			number, err := strconv.Atoi(strings.TrimSpace(number))
+		for _, input := range column.inputs {
+			number, err := strconv.Atoi(strings.TrimSpace(input))
 			if err != nil {
 				panic(err)
 			}
@@ -33,10 +32,17 @@ func part1(table Table) int {
 		sum += value
 	}
 
-	return sum
+	return
 }
 
-func parse1(text string) Table {
+func transposeColumns(table Table) (modified Table) {
+	for _, column := range table.columns {
+		modified.columns = append(modified.columns, column.transpose())
+	}
+	return
+}
+
+func parse(text string) Table {
 	lines := strings.Split(text, "\n")
 
 	lastLine := lines[len(lines)-1]
@@ -88,6 +94,17 @@ type Column struct {
 	opChar byte
 }
 
+func (c Column) initValue() int {
+	switch c.opChar {
+	case '+':
+		return 0
+	case '*':
+		return 1
+	default:
+		panic("invalid op")
+	}
+}
+
 func (c Column) op(a, b int) int {
 	switch c.opChar {
 	case '+':
@@ -99,13 +116,31 @@ func (c Column) op(a, b int) int {
 	}
 }
 
-func (c Column) initValue() int {
-	switch c.opChar {
-	case '+':
-		return 0
-	case '*':
-		return 1
-	default:
-		panic("invalid op")
+func (column Column) width() (width int) {
+	for _, entry := range column.inputs {
+		width = max(width, len(entry))
 	}
+	return
+}
+func (column Column) transpose() (newColumn Column) {
+	newColumn.opChar = column.opChar
+
+	for indexInColumn := range column.width() {
+		var chars []byte
+
+		for _, entry := range column.inputs {
+			var char byte
+			if indexInColumn >= len(entry) {
+				char = ' '
+			} else {
+				char = entry[indexInColumn]
+			}
+
+			chars = append(chars, char)
+		}
+		input := string(chars)
+
+		newColumn.inputs = append(newColumn.inputs, input)
+	}
+	return
 }

@@ -1,9 +1,9 @@
 package main
 
 import (
+	"aoc2025/shared"
 	"fmt"
 	"math"
-	"os"
 	"slices"
 	"strings"
 )
@@ -87,22 +87,11 @@ func part2(banks []Bank) int {
 
 func main() {
 	var input string
-	// input = "987654321111111\n811111111111119\n234234234234278\n818181911112111"
-	input = readFile("input.txt")
+	input = "987654321111111\n811111111111119\n234234234234278\n818181911112111"
+	input = shared.ReadFile("input.txt")
 
 	banks := parse(input)
 
 	fmt.Printf("Part 1: %v\n", part1(banks))
 	fmt.Printf("Part 2: %v\n", part2(banks))
-}
-
-func readFile(name string) string {
-	data, err := os.ReadFile(name)
-
-	// say the line bart
-	if err != nil {
-		panic(err)
-	}
-
-	return strings.TrimSpace(string(data))
 }

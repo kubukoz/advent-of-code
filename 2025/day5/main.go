@@ -1,8 +1,8 @@
 package main
 
 import (
+	"aoc2025/shared"
 	"fmt"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -12,7 +12,7 @@ func main() {
 	var input string
 	input = "3-5\n10-14\n16-20\n12-18\n\n1\n5\n8\n11\n17\n32"
 
-	input = readFile("input.txt")
+	input = shared.ReadFile("input.txt")
 
 	parts := strings.Split(input, "\n\n")
 
@@ -156,15 +156,4 @@ func (r Range) join(another Range) Range {
 		fromInc: min(r.fromInc, another.fromInc),
 		toInc:   max(r.toInc, another.toInc),
 	}
-}
-
-func readFile(name string) string {
-	data, err := os.ReadFile(name)
-
-	// say the line bart
-	if err != nil {
-		panic(err)
-	}
-
-	return strings.TrimSpace(string(data))
 }

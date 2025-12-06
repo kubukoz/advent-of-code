@@ -1,8 +1,8 @@
 package main
 
 import (
+	"aoc2025/shared"
 	"fmt"
-	"os"
 	"strings"
 )
 
@@ -10,7 +10,7 @@ func main() {
 	var input string
 	input = "..@@.@@@@.\n@@@.@.@.@@\n@@@@@.@.@@\n@.@@@@..@.\n@@.@@@@.@@\n.@@@@@@@.@\n.@.@.@.@@@\n@.@@@.@@@@\n.@@@@@@@@.\n@.@.@@@.@."
 
-	input = readFile("input.txt")
+	input = shared.ReadFile("input.txt")
 
 	lines := strings.Split(input, "\n")
 
@@ -69,15 +69,4 @@ func countRolls(lines []string, canRemove bool) int {
 
 func inRange(number int, fromInc int, toExc int) bool {
 	return number >= fromInc && number < toExc
-}
-
-func readFile(name string) string {
-	data, err := os.ReadFile(name)
-
-	// say the line bart
-	if err != nil {
-		panic(err)
-	}
-
-	return strings.TrimSpace(string(data))
 }

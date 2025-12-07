@@ -18,11 +18,8 @@ func main() {
 func part1(lines []string) (total int) {
 	// assume the start is in the first line
 	startIndex := strings.IndexByte(lines[0], 'S')
+	currentLineIndex := 0
 
-	return branches(lines, 0, startIndex)
-}
-
-func branches(lines []string, currentLineIndex int, startIndex int) int {
 	currentByteIndices := []int{startIndex}
 	splitCount := 0
 

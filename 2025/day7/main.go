@@ -3,7 +3,6 @@ package main
 import (
 	"aoc2025/shared"
 	"fmt"
-	"slices"
 	"strings"
 )
 
@@ -20,7 +19,7 @@ func part1(lines []string) (total int) {
 	startIndex := strings.IndexByte(lines[0], 'S')
 	currentLineIndex := 0
 
-	currentByteIndices := []int{startIndex}
+	currentByteIndices := map[int]int{startIndex: 1}
 	splitCount := 0
 
 	for {
@@ -30,20 +29,17 @@ func part1(lines []string) (total int) {
 		}
 		line := lines[currentLineIndex]
 
-		newCharIndices := []int{}
+		newCharIndices := map[int]int{}
 
-		for _, pointer := range currentByteIndices {
+		for pointer := range currentByteIndices {
 			atPointer := line[pointer]
 			switch atPointer {
 			case '.':
-				newCharIndices = appendIfMissing(newCharIndices, pointer)
+				addToCounts(&newCharIndices, pointer)
 			case '^':
-				// if pointer > 0 {
-				newCharIndices = appendIfMissing(newCharIndices, pointer-1)
-				// }
-				// if pointer < len(line) {
-				newCharIndices = appendIfMissing(newCharIndices, pointer+1)
-				// }
+				addToCounts(&newCharIndices, pointer-1)
+				addToCounts(&newCharIndices, pointer+1)
+
 				splitCount++
 			}
 		}
@@ -53,11 +49,8 @@ func part1(lines []string) (total int) {
 	return splitCount
 }
 
-// not very efficient but what can you do
-func appendIfMissing[T comparable](slice []T, item T) []T {
-	if slices.Contains(slice, item) {
-		return slice
-	} else {
-		return append(slice, item)
-	}
+func addToCounts[T comparable](items *map[T]int, k T) {
+	currV := (*items)[k]
+	currV++
+	(*items)[k] = currV
 }

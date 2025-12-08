@@ -11,10 +11,11 @@ func main() {
 	input = shared.ReadFile("input.txt")
 	lines := strings.Split(input, "\n")
 
-	fmt.Printf("Part 1: %v\n", part1(lines))
+	part1, part2 := both(lines)
+	fmt.Printf("Part 1: %v, Part 2: %v\n", part1, part2)
 }
 
-func part1(lines []string) (total int) {
+func both(lines []string) (part1 int, part2 int) {
 	// assume the start is in the first line
 	startIndex := strings.IndexByte(lines[0], 'S')
 	currentLineIndex := 0
@@ -35,16 +36,22 @@ func part1(lines []string) (total int) {
 			atPointer := line[pointer]
 			switch atPointer {
 			case '.':
-				newCharIndices[pointer] = countAtPointer
+				newCharIndices[pointer] += countAtPointer
 			case '^':
-				newCharIndices[pointer-1] = countAtPointer
-				newCharIndices[pointer+1] = countAtPointer
+				newCharIndices[pointer-1] += countAtPointer
+				newCharIndices[pointer+1] += countAtPointer
 
 				splitCount++
 			}
 		}
+
 		currentByteIndices = newCharIndices
 	}
 
-	return splitCount
+	totalPaths := 0
+	for _, c := range currentByteIndices {
+		totalPaths += c
+	}
+
+	return splitCount, totalPaths
 }

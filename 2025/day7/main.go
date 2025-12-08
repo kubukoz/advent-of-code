@@ -31,14 +31,14 @@ func part1(lines []string) (total int) {
 
 		newCharIndices := map[int]int{}
 
-		for pointer := range currentByteIndices {
+		for pointer, countAtPointer := range currentByteIndices {
 			atPointer := line[pointer]
 			switch atPointer {
 			case '.':
-				addToCounts(&newCharIndices, pointer)
+				newCharIndices[pointer] = countAtPointer
 			case '^':
-				addToCounts(&newCharIndices, pointer-1)
-				addToCounts(&newCharIndices, pointer+1)
+				newCharIndices[pointer-1] = countAtPointer
+				newCharIndices[pointer+1] = countAtPointer
 
 				splitCount++
 			}
@@ -47,10 +47,4 @@ func part1(lines []string) (total int) {
 	}
 
 	return splitCount
-}
-
-func addToCounts[T comparable](items *map[T]int, k T) {
-	currV := (*items)[k]
-	currV++
-	(*items)[k] = currV
 }

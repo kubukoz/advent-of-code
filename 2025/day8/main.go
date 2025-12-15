@@ -4,11 +4,12 @@ import (
 	"aoc2025/shared"
 	"fmt"
 	"maps"
-	"math"
 	"slices"
 	"strconv"
 	"strings"
 )
+
+type Point3 = shared.Point3
 
 func main() {
 	input := shared.ReadFile("sample.txt")
@@ -17,10 +18,6 @@ func main() {
 	data := parse(input)
 
 	fmt.Printf("Part 1: %v\n", part1(data, 1000))
-}
-
-type Point3 struct {
-	x, y, z int
 }
 
 type Circuit map[Point3]bool
@@ -121,7 +118,7 @@ func makeDistances(points []Point3) (distanceList []PairWithDistance) {
 			if p1 == p2 || presentFlipped {
 				continue
 			}
-			distanceMap[Pair{p1, p2}] = p1.distance(p2)
+			distanceMap[Pair{p1, p2}] = p1.Distance(p2)
 		}
 	}
 
@@ -147,24 +144,8 @@ func parse(input string) (results []Point3) {
 			coords = append(coords, parsed)
 		}
 
-		results = append(results, Point3{coords[0], coords[1], coords[2]})
+		results = append(results, Point3{X: coords[0], Y: coords[1], Z: coords[2]})
 
 	}
 	return
-}
-
-func (p Point3) distance(another Point3) float64 {
-	return math.Pow(
-		float64(
-			absSquare(p.x, another.x)+
-				absSquare(p.y, another.y)+
-				absSquare(p.z, another.z),
-		),
-		1./3,
-	)
-}
-
-func absSquare(a int, b int) int {
-	abs := int(math.Abs(float64(a - b)))
-	return abs * abs
 }

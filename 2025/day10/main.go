@@ -3,6 +3,7 @@ package main
 import (
 	"aoc2025/shared"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -13,7 +14,49 @@ func main() {
 
 	data := parse(input)
 
-	fmt.Printf("I SPENT ALL DAY PARSING AND ALL I GOT WAS SOME CRAP: %v\n", data)
+	fmt.Printf("Part 1: %v\n", part1(data))
+}
+
+func part1(machines []Machine) (sum int) {
+	for _, m := range machines {
+		sum += solve(m)
+	}
+	return
+}
+
+func solve(machine Machine) int {
+	states := []MachineState{machine.initState()}
+	steps := 0
+
+	if states[0].sameStates(machine.targetState) {
+		return 0
+	}
+
+	for {
+		nextRound := []MachineState{}
+		steps++
+
+		for _, nextButton := range machine.buttons {
+
+			for _, previousState := range states {
+				newState := MachineState{slices.Clone(previousState.states)}
+
+				// Surely this can be done faster by treating the state as a bitmask and treating buttons as masks
+				// but part 1 passes fine and I didn't feel like doing that in Go just yet
+				for _, indexToUpdate := range nextButton.affectsIndices {
+					newState.states[indexToUpdate] = !newState.states[indexToUpdate]
+				}
+
+				if newState.sameStates(machine.targetState) {
+					return steps
+				}
+
+				nextRound = append(nextRound, newState)
+			}
+		}
+
+		states = nextRound
+	}
 }
 
 func parse(input string) (machines []Machine) {
@@ -58,8 +101,28 @@ type Machine struct {
 	// joltages    []Joltage
 }
 
+func (m Machine) initState() (s MachineState) {
+	for range m.targetState.states {
+		s.states = append(s.states, false)
+	}
+	return
+}
+
 type MachineState struct {
 	states []bool
+}
+
+func (m MachineState) sameStates(state MachineState) bool {
+	if len(m.states) != len(state.states) {
+		return false
+	}
+
+	for i, m1 := range m.states {
+		if state.states[i] != m1 {
+			return false
+		}
+	}
+	return true
 }
 
 type Button struct {

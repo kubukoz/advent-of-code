@@ -3,13 +3,13 @@ Advent of Code
 
     [About][Events][Shop][Settings][Log Out]
 
-kubukoz 14*
-      /*2025*/
+kubukoz 15*
+        //2025
 
     [Calendar][AoC++][Sponsors][Leaderboards][Stats]
 
 Our sponsors help make Advent of Code possible:
-Squarepoint - Squarepoint is a global investment firm that combines rigorous research and cutting-edge technology to develop strategies trading across global markets. Technology is integral to our success, check out our careers page.
+Air Space Intelligence - Come help us bring ATC and other critical industries into the 21st Century. Built w/Rust & Typescript out of BOS & SEA
 --- Day 11: Reactor ---
 
 You hear some loud beeping coming from a hatch in the floor of the factory, so you decide to check it out. Inside, you find several large electrical conduits and a ladder.
@@ -56,4 +56,3 @@ To begin, get your puzzle input.
 Answer:
 
 You can also [Shareon Bluesky Twitter Mastodon] this puzzle.
-

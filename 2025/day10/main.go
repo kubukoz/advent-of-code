@@ -3,14 +3,13 @@ package main
 import (
 	"aoc2025/shared"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 )
 
 func main() {
 	input := shared.ReadFile("sample.txt")
-	// input = shared.ReadFile("input.txt")
+	input = shared.ReadFile("input.txt")
 
 	data := parse(input)
 
@@ -39,13 +38,7 @@ func solve(machine Machine) int {
 		for _, nextButton := range machine.buttons {
 
 			for _, previousState := range states {
-				newState := MachineState{slices.Clone(previousState.states)}
-
-				// Surely this can be done faster by treating the state as a bitmask and treating buttons as masks
-				// but part 1 passes fine and I didn't feel like doing that in Go just yet
-				for _, indexToUpdate := range nextButton.affectsIndices {
-					newState.states[indexToUpdate] = !newState.states[indexToUpdate]
-				}
+				newState := MachineState{previousState.state ^ nextButton.mask}
 
 				if newState.sameStates(machine.targetState) {
 					return steps
@@ -63,13 +56,13 @@ func parse(input string) (machines []Machine) {
 	for line := range strings.SplitSeq(input, "\n") {
 		fields := strings.Fields(line)
 
-		var targetState MachineState
-		for _, rune := range fields[0][1 : len(fields[0])-1] {
+		targetState := MachineState{0}
+		for i, rune := range fields[0][1 : len(fields[0])-1] {
 			switch rune {
 			case '#':
-				targetState.states = append(targetState.states, true)
+				targetState.state += (1 << i)
 			case '.':
-				targetState.states = append(targetState.states, false)
+				// do nothing
 			default:
 				panic(fmt.Sprintf("unexpected rune %c", rune))
 			}
@@ -77,13 +70,13 @@ func parse(input string) (machines []Machine) {
 
 		var buttons []Button
 		for _, buttonField := range fields[1 : len(fields)-1] {
-			numbers := []int{}
+			numbers := uint(0)
 			for number := range strings.SplitSeq(buttonField[1:len(buttonField)-1], ",") {
 				number, err := strconv.Atoi(number)
 				if err != nil {
 					panic(err)
 				}
-				numbers = append(numbers, number)
+				numbers += (1 << number)
 			}
 
 			buttons = append(buttons, Button{numbers})
@@ -102,31 +95,19 @@ type Machine struct {
 }
 
 func (m Machine) initState() (s MachineState) {
-	for range m.targetState.states {
-		s.states = append(s.states, false)
-	}
-	return
+	return MachineState{0}
 }
 
 type MachineState struct {
-	states []bool
+	state uint
 }
 
 func (m MachineState) sameStates(state MachineState) bool {
-	if len(m.states) != len(state.states) {
-		return false
-	}
-
-	for i, m1 := range m.states {
-		if state.states[i] != m1 {
-			return false
-		}
-	}
-	return true
+	return m.state == state.state
 }
 
 type Button struct {
-	affectsIndices []int
+	mask uint
 }
 
 type Joltage = int

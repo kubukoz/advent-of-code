@@ -26,7 +26,7 @@ func part1(data []Point2) int {
 				continue
 			}
 
-			area := p1.XDist(p2) * p1.YDist(p2)
+			area := (p1.XDist(p2) + 1) * (p1.YDist(p2) + 1)
 			if area > maxSoFar {
 				maxSoFar = area
 			}

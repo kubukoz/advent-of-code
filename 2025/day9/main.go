@@ -37,7 +37,7 @@ func part1(data []Point2) int {
 }
 
 func parse(input string) (points []Point2) {
-	for _, line := range strings.Split(input, "\n") {
+	for line := range strings.SplitSeq(input, "\n") {
 		line := strings.Split(line, ",")
 		x, err := strconv.Atoi(line[0])
 		if err != nil {

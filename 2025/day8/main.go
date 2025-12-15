@@ -134,9 +134,9 @@ func makeDistances(points []Point3) (distanceList []PairWithDistance) {
 }
 
 func parse(input string) (results []Point3) {
-	for _, line := range strings.Split(input, "\n") {
+	for line := range strings.SplitSeq(input, "\n") {
 		coords := []int{}
-		for _, coord := range strings.Split(line, ",") {
+		for coord := range strings.SplitSeq(line, ",") {
 			parsed, err := strconv.Atoi(coord)
 			if err != nil {
 				panic(err)
